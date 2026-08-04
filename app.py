@@ -1,5 +1,6 @@
 import io
 import re
+from fpdf import FPDF
 import numpy as np
 import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill
@@ -60,7 +61,7 @@ st.markdown(
         box-shadow: 0 2px 4px rgba(0,0,0,0.04);
     }
     div[data-testid="stMetricValue"] {
-        font-size: 1.8rem;
+        font-size: 1.7rem;
         font-weight: 700;
         color: #0052CC;
     }
@@ -79,34 +80,50 @@ st.markdown(
         transform: translateY(-2px);
         box-shadow: 0 4px 14px rgba(0,0,0,0.1);
     }
+    .badge-gold {
+        background-color: #D97706;
+        color: white;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.82rem;
+        font-weight: bold;
+        display: inline-block;
+        margin-bottom: 8px;
+        margin-right: 4px;
+    }
     .badge-discount {
         background-color: #DC2626;
         color: white;
         padding: 4px 10px;
         border-radius: 20px;
-        font-size: 0.85rem;
+        font-size: 0.82rem;
         font-weight: bold;
         display: inline-block;
         margin-bottom: 8px;
+        margin-right: 4px;
     }
     .badge-type {
         background-color: #E0E7FF;
         color: #3730A3;
         padding: 4px 10px;
         border-radius: 20px;
-        font-size: 0.85rem;
+        font-size: 0.82rem;
         font-weight: 600;
         display: inline-block;
         margin-bottom: 8px;
-        margin-left: 5px;
     }
     .price-main {
         font-size: 1.4rem;
         font-weight: bold;
         color: #166534;
     }
+    .price-profit {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #2563EB;
+    }
     .price-old {
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         color: #9CA3AF;
         text-decoration: line-through;
     }
@@ -117,8 +134,61 @@ st.markdown(
 
 
 # ---------------------------------------------------------
-# 3. FUNÇÕES DE TRATAMENTO E EXPORTAÇÃO
+# 3. FUNÇÕES AUXILIARES, TRATAMENTO E EXPORTAÇÃO
 # ---------------------------------------------------------
+def clean_ascii(text):
+  if not isinstance(text, str):
+    text = str(text) if text is not None else ""
+  replacements = {
+      "á": "a",
+      "à": "a",
+      "â": "a",
+      "ã": "a",
+      "ä": "a",
+      "Á": "A",
+      "À": "A",
+      "Â": "A",
+      "Ã": "A",
+      "é": "e",
+      "è": "e",
+      "ê": "e",
+      "ë": "e",
+      "É": "E",
+      "È": "E",
+      "Ê": "E",
+      "í": "i",
+      "ì": "i",
+      "î": "i",
+      "ï": "i",
+      "Í": "I",
+      "Ì": "I",
+      "Î": "I",
+      "ó": "o",
+      "ò": "o",
+      "ô": "o",
+      "õ": "o",
+      "ö": "o",
+      "Ó": "O",
+      "Ò": "O",
+      "Ô": "O",
+      "Õ": "O",
+      "ú": "u",
+      "ù": "u",
+      "û": "u",
+      "ü": "u",
+      "Ú": "U",
+      "Ù": "U",
+      "Û": "U",
+      "ç": "c",
+      "Ç": "C",
+      "º": "o",
+      "ª": "a",
+  }
+  for k, v in replacements.items():
+    text = text.replace(k, v)
+  return text.encode("latin-1", "replace").decode("latin-1")
+
+
 def normalize(text):
   if not isinstance(text, str):
     return ""
@@ -165,6 +235,118 @@ def parse_types(tipos_str):
   return list(res)
 
 
+class InvestorPDF(FPDF):
+
+  def header(self):
+    self.set_font("Arial", "B", 13)
+    self.set_fill_color(0, 82, 204)
+    self.set_text_color(255, 255, 255)
+    self.cell(
+        0,
+        12,
+        clean_ascii("  RELATORIO DE OPORTUNIDADES EM LEILAO"),
+        0,
+        1,
+        "L",
+        fill=True,
+    )
+    self.ln(4)
+
+  def footer(self):
+    self.set_y(-15)
+    self.set_font("Arial", "I", 8)
+    self.set_text_color(128, 128, 128)
+    self.cell(0, 10, f"Pagina {self.page_no()}", 0, 0, "C")
+
+
+def gerar_pdf_investidor(nome_investidor, df_inv):
+  pdf = InvestorPDF()
+  pdf.add_page()
+
+  # Ficha do Investidor
+  pdf.set_font("Arial", "B", 12)
+  pdf.set_text_color(30, 41, 59)
+  pdf.cell(0, 8, clean_ascii(f"INVESTIDOR: {nome_investidor}"), 0, 1)
+
+  cid_req = clean_ascii(str(df_inv["Cidades Solicitadas"].iloc[0]))
+  faixa_req = clean_ascii(str(df_inv["Faixa Solicitada"].iloc[0]))
+
+  pdf.set_font("Arial", "", 9)
+  pdf.set_text_color(100, 116, 139)
+  pdf.cell(
+      0,
+      5,
+      clean_ascii(f"Regioes: {cid_req} | Orçamento: {faixa_req}"),
+      0,
+      1,
+  )
+  pdf.cell(
+      0,
+      5,
+      clean_ascii(f"Total de Imoveis Selecionados: {len(df_inv)}"),
+      0,
+      1,
+  )
+  pdf.ln(5)
+
+  # Imóveis em Tabela/Lista
+  for idx, row in df_inv.iterrows():
+    pdf.set_fill_color(248, 250, 252)
+    pdf.set_draw_color(226, 232, 240)
+
+    pdf.set_font("Arial", "B", 10)
+    pdf.set_text_color(0, 82, 204)
+    desconto = str(row["Desconto (%)"])
+    tipo = clean_ascii(str(row["Tipo de Bem"]))
+    titulo = clean_ascii(str(row["Título do Imóvel"]))
+
+    pdf.cell(
+        0,
+        7,
+        clean_ascii(f"[{desconto}% OFF] [{tipo}] {titulo[:65]}"),
+        "LTR",
+        1,
+        "L",
+        fill=True,
+    )
+
+    pdf.set_font("Arial", "", 8.5)
+    pdf.set_text_color(51, 65, 85)
+    cidade = clean_ascii(str(row["Cidade Imóvel"]))
+    estado = clean_ascii(str(row["Estado Imóvel"]))
+    preco = f"{row['Preço do Leilão (R$)']:,.2f}"
+    avaliac = f"{row['Valor de Avaliação (R$)']:,.2f}"
+    lucro = f"{row['Lucro Potencial (R$)']:,.2f}"
+
+    pdf.cell(
+        0,
+        5,
+        clean_ascii(
+            f" Local: {cidade} - {estado} | Preço: R$ {preco} (Avaliacao: R$"
+            f" {avaliac})"
+        ),
+        "LR",
+        1,
+        "L",
+        fill=True,
+    )
+    pdf.cell(
+        0,
+        5,
+        clean_ascii(
+            f" Lucro Estimado: R$ {lucro} | Endereço: {clean_ascii(str(row['Endereço']))[:75]}"
+        ),
+        "LBR",
+        1,
+        "L",
+        fill=True,
+    )
+    pdf.ln(3)
+
+  output_bytes = pdf.output(dest="S").encode("latin-1")
+  return output_bytes
+
+
 def gerar_excel_profissional(df_input):
   output = io.BytesIO()
   df_export = df_input.copy()
@@ -207,11 +389,15 @@ def gerar_excel_profissional(df_input):
       col_letter = get_column_letter(col_idx)
       cells = ws[col_letter][1:]
 
-      if "Preço" in str(col_name) or "Avaliação" in str(col_name):
+      if (
+          "Preço" in str(col_name)
+          or "Avaliação" in str(col_name)
+          or "Lucro" in str(col_name)
+      ):
         for c in cells:
           c.number_format = "R$ #,##0.00"
           c.alignment = align_right
-      elif "Desconto" in str(col_name):
+      elif "Desconto" in str(col_name) or "ROI" in str(col_name):
         for c in cells:
           c.number_format = '0.00"%"'
           c.alignment = align_right
@@ -238,6 +424,8 @@ def gerar_excel_profissional(df_input):
         "Preço do Leilão (R$)": 22,
         "Valor de Avaliação (R$)": 24,
         "Desconto (%)": 15,
+        "Lucro Potencial (R$)": 22,
+        "ROI Estimado (%)": 16,
         "Endereço": 45,
         "Link do Imóvel": 18,
     }
@@ -287,11 +475,12 @@ with col_head2:
         ### 📖 Passo a Passo Simples
         1. **Carregue as planilhas** no menu lateral à esquerda.
         2. Clique em **🚀 Processar Oportunidades**.
-        3. Use os **filtros de desconto e tipo** para refinar.
+        3. Refine por **Preço, Desconto Mínimo ou Tipo**.
         4. Navegue pelas **abas**:
-           * 📊 **Visão Geral:** Gráficos e indicadores gerais.
+           * 📊 **Visão Geral:** Gráficos e inteligência financeira.
            * 📋 **Tabela:** Dados completos e download em Excel.
-           * 👤 **Por Investidor:** Ficha de cada cliente com seus imóveis.
+           * 👤 **Por Investidor:** Vitrine e emissão de **PDF**.
+           * ⚔️ **Comparativo:** Análise lado a lado de investidores.
         """)
 
 
@@ -318,7 +507,7 @@ if file_leiloes and file_investidores and executar:
           axis=1,
       )
 
-      # CORREÇÃO: Trava para só calcular desconto se preço > 0 e não for nulo
+      # Desconto Real (>0)
       df_leiloes["desconto_%"] = np.where(
           (pd.notnull(df_leiloes["Valor de Avaliação do Leiloeiro"]))
           & (df_leiloes["Valor de Avaliação do Leiloeiro"] > 0)
@@ -449,6 +638,15 @@ if file_leiloes and file_investidores and executar:
         )
 
         for _, imovel in sub_sorted.iterrows():
+          preco = imovel["preco_effective"]
+          avaliac = imovel["Valor de Avaliação do Leiloeiro"]
+          lucro = (
+              avaliac - preco
+              if pd.notnull(avaliac) and pd.notnull(preco)
+              else 0
+          )
+          roi = (lucro / preco) * 100 if preco > 0 else 0
+
           resultados.append({
               "ID Investidor": idx + 1,
               "Nome do Investidor": nome,
@@ -458,17 +656,17 @@ if file_leiloes and file_investidores and executar:
               "Cidade Imóvel": imovel["Cidade"],
               "Estado Imóvel": imovel["Estado"],
               "Tipo de Bem": imovel["Tipo de Bem"],
-              "Preço do Leilão (R$)": imovel["preco_effective"],
-              "Valor de Avaliação (R$)": imovel[
-                  "Valor de Avaliação do Leiloeiro"
-              ],
+              "Preço do Leilão (R$)": preco,
+              "Valor de Avaliação (R$)": avaliac,
               "Desconto (%)": round(imovel["desconto_%"], 2),
+              "Lucro Potencial (R$)": round(lucro, 2),
+              "ROI Estimado (%)": round(roi, 1),
               "Endereço": imovel["Endereço"],
               "Link do Imóvel": imovel["Link"],
           })
 
       st.session_state["df_final"] = pd.DataFrame(resultados)
-      st.toast("✅ Processamento concluído com sucesso!", icon="🎉")
+      st.toast("✅ Processamento inteligente concluído!", icon="🎉")
 
     except Exception as e:
       st.error(f"Erro ao processar as planilhas: {e}")
@@ -480,9 +678,9 @@ if file_leiloes and file_investidores and executar:
 if "df_final" in st.session_state and not st.session_state["df_final"].empty:
   df_base = st.session_state["df_final"]
 
-  # BARRA DE FILTROS DINÂMICOS
-  with st.expander("🔍 **Filtros de Refinamento ao Vivo**", expanded=True):
-    f_col1, f_col2, f_col3 = st.columns([1, 2, 2])
+  # BARRA DE FILTROS DINÂMICOS AVANÇADOS
+  with st.expander("🔍 **Filtros Avançados de Refinamento**", expanded=True):
+    f_col1, f_col2, f_col3, f_col4 = st.columns([1.2, 1.8, 1.5, 1.5])
 
     with f_col1:
       desconto_min = st.slider(
@@ -494,16 +692,31 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
       )
 
     with f_col2:
+      max_p = (
+          float(df_base["Preço do Leilão (R$)"].max())
+          if not df_base.empty
+          else 5000000.0
+      )
+      faixa_preco = st.slider(
+          "Faixa de Preço do Leilão (R$)",
+          min_value=0.0,
+          max_value=min(max_p, 10000000.0),
+          value=(0.0, min(max_p, 10000000.0)),
+          step=50000.0,
+          format="R$ %,.0f",
+      )
+
+    with f_col3:
       tipos_disponiveis = sorted(df_base["Tipo de Bem"].unique().tolist())
       tipos_selecionados = st.multiselect(
-          "Filtrar por Tipo de Bem",
+          "Tipo de Bem",
           options=tipos_disponiveis,
           default=tipos_disponiveis,
       )
 
-    with f_col3:
+    with f_col4:
       busca_texto = st.text_input(
-          "Buscar (Cidade, Investidor ou Título)",
+          "Buscar Palavra-chave",
           value="",
           placeholder="Ex: Rio Preto, Simonetti, Casa...",
       )
@@ -511,6 +724,8 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
   # Aplicar Filtros
   df_filtered = df_base[
       (df_base["Desconto (%)"] >= desconto_min)
+      & (df_base["Preço do Leilão (R$)"] >= faixa_preco[0])
+      & (df_base["Preço do Leilão (R$)"] <= faixa_preco[1])
       & (df_base["Tipo de Bem"].isin(tipos_selecionados))
   ]
 
@@ -523,21 +738,22 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
     ]
 
   # ESTRUTURA DE ABAS
-  tab1, tab2, tab3 = st.tabs([
-      "📊 Visão Geral & Gráficos",
+  tab1, tab2, tab3, tab4 = st.tabs([
+      "📊 Visão Geral & Inteligência",
       "📋 Tabela Completa & Download",
-      "👤 Cards por Investidor",
+      "👤 Cards por Investidor (PDF)",
+      "⚔️ Modo Comparativo",
   ])
 
   # -------------------------------------------------------
-  # ABA 1: VISÃO GERAL & GRÁFICOS
+  # ABA 1: VISÃO GERAL & INTELIGÊNCIA
   # -------------------------------------------------------
   with tab1:
     st.write(" ")
-    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    kpi1.metric("🏢 Total de Imóveis", f"{len(df_filtered):,}")
+    kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
+    kpi1.metric("🏢 Total Imóveis", f"{len(df_filtered):,}")
     kpi2.metric(
-        "👥 Investidores Atendidos",
+        "👥 Investidores",
         f"{df_filtered['Nome do Investidor'].nunique()}"
         if not df_filtered.empty
         else "0",
@@ -548,12 +764,18 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
         if not df_filtered.empty
         else "0%",
     )
+    total_lucro = (
+        df_filtered["Lucro Potencial (R$)"].sum()
+        if not df_filtered.empty
+        else 0
+    )
+    kpi4.metric("💰 Lucro Estimado Total", f"R$ {total_lucro:,.0f}")
     avg_price = (
         df_filtered["Preço do Leilão (R$)"].mean()
         if not df_filtered.empty
         else 0
     )
-    kpi4.metric("💰 Ticket Médio", f"R$ {avg_price:,.2f}")
+    kpi5.metric("🏷️ Ticket Médio", f"R$ {avg_price:,.2f}")
 
     st.markdown("---")
 
@@ -631,8 +853,14 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
               "Valor de Avaliação (R$)": st.column_config.NumberColumn(
                   "Valor Avaliação", format="R$ %,.2f"
               ),
+              "Lucro Potencial (R$)": st.column_config.NumberColumn(
+                  "Lucro Estimado", format="R$ %,.2f"
+              ),
               "Desconto (%)": st.column_config.ProgressColumn(
                   "Desconto (%)", format="%.1f%%", min_value=0, max_value=100
+              ),
+              "ROI Estimado (%)": st.column_config.NumberColumn(
+                  "ROI (%)", format="%.1f%%"
               ),
           },
       )
@@ -642,7 +870,7 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
       )
 
   # -------------------------------------------------------
-  # ABA 3: CARDS POR INVESTIDOR (VITRINE IMOBILIÁRIA)
+  # ABA 3: CARDS POR INVESTIDOR & PDF
   # -------------------------------------------------------
   with tab3:
     st.write(" ")
@@ -650,16 +878,35 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
       investidores_lista = sorted(
           df_filtered["Nome do Investidor"].unique().tolist()
       )
-      investidor_sel = st.selectbox(
-          "👤 Selecione o Investidor para visualizar sua vitrine:",
-          options=investidores_lista,
-      )
+
+      c_sel1, c_sel2 = st.columns([3, 1])
+      with c_sel1:
+        investidor_sel = st.selectbox(
+            "👤 Selecione o Investidor:",
+            options=investidores_lista,
+        )
+      with c_sel2:
+        st.write(" ")
+        df_inv_curr = df_filtered[
+            df_filtered["Nome do Investidor"] == investidor_sel
+        ]
+        if not df_inv_curr.empty:
+          pdf_bytes = gerar_pdf_investidor(investidor_sel, df_inv_curr)
+          st.download_button(
+              label="📄 Relatório PDF (WhatsApp)",
+              data=pdf_bytes,
+              file_name=(
+                  f"relatorio_{normalize(investidor_sel).replace(' ', '_')}.pdf"
+              ),
+              mime="application/pdf",
+              use_container_width=True,
+          )
 
       df_inv = df_filtered[
           df_filtered["Nome do Investidor"] == investidor_sel
       ]
 
-      st.markdown(f"### 🎯 Oportunidades Selecionadas para: **{investidor_sel}**")
+      st.markdown(f"### 🎯 Vitrine Exclusiva: **{investidor_sel}**")
       st.caption(
           f"Preferências solicitadas: {df_inv['Cidades Solicitadas'].iloc[0]} |"
           f" Faixa: {df_inv['Faixa Solicitada'].iloc[0]}"
@@ -667,10 +914,30 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
 
       st.write(" ")
 
-      # Grid de Cards (2 por linha)
       cols_cards = st.columns(2)
       for idx, (_, row) in enumerate(df_inv.iterrows()):
         col_target = cols_cards[idx % 2]
+
+        # Lógica de Badges Especiais
+        badge_html = ""
+        if (
+            row["Desconto (%)"] >= 60
+            and row["Lucro Potencial (R$)"] >= 300000
+        ):
+          badge_html += (
+              '<span class="badge-gold">💎 Oportunidade de Ouro</span>'
+          )
+        elif row["Desconto (%)"] >= 50:
+          badge_html += (
+              f'<span class="badge-discount">🔥 {row["Desconto (%)"]}%'
+              ' OFF</span>'
+          )
+        else:
+          badge_html += (
+              f'<span class="badge-discount">{row["Desconto (%)"]}% OFF</span>'
+          )
+
+        badge_html += f'<span class="badge-type">🏠 {row["Tipo de Bem"]}</span>'
 
         with col_target:
           link_url = (
@@ -682,13 +949,12 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
           st.markdown(
               f"""
                 <div class="property-card">
-                    <span class="badge-discount">🔥 {row['Desconto (%)']}% OFF</span>
-                    <span class="badge-type">🏠 {row['Tipo de Bem']}</span>
+                    {badge_html}
                     <h4 style="margin-top: 8px; margin-bottom: 4px; color: #1E293B;">{row['Título do Imóvel']}</h4>
-                    <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 12px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']}</p>
-                    <div style="margin-bottom: 12px;">
-                        <span class="price-main">R$ {row['Preço do Leilão (R$)']:,.2f}</span><br>
-                        <span class="price-old">Avaliado em: R$ {row['Valor de Avaliação (R$)']:,.2f}</span>
+                    <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 10px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']}</p>
+                    <div style="margin-bottom: 10px;">
+                        <span class="price-main">R$ {row['Preço do Leilão (R$)']:,.2f}</span> <span class="price-old">(Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f})</span><br>
+                        <span class="price-profit">💰 Lucro Estimado: R$ {row['Lucro Potencial (R$)']:,.2f} (ROI: {row['ROI Estimado (%)']}%)</span>
                     </div>
                     <p style="font-size: 0.85rem; color: #475569; margin-bottom: 15px;"><b>Endereço:</b> {row['Endereço']}</p>
                     <a href="{link_url}" target="_blank" style="text-decoration: none;">
@@ -700,6 +966,74 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
                 """,
               unsafe_allow_html=True,
           )
+
+  # -------------------------------------------------------
+  # ABA 4: MODO COMPARATIVO DE INVESTIDORES
+  # -------------------------------------------------------
+  with tab4:
+    st.write(" ")
+    st.subheader("⚔️ Comparativo Direto entre Investidores")
+    st.caption("Compare critérios e oportunidades encontradas lado a lado.")
+
+    if not df_filtered.empty:
+      all_invs = sorted(df_filtered["Nome do Investidor"].unique().tolist())
+
+      comp_col1, comp_col2 = st.columns(2)
+      with comp_col1:
+        inv1 = st.selectbox(
+            "Selecione o Investidor A:", options=all_invs, index=0
+        )
+      with comp_col2:
+        idx2 = 1 if len(all_invs) > 1 else 0
+        inv2 = st.selectbox(
+            "Selecione o Investidor B:", options=all_invs, index=idx2
+        )
+
+      df1 = df_filtered[df_filtered["Nome do Investidor"] == inv1]
+      df2 = df_filtered[df_filtered["Nome do Investidor"] == inv2]
+
+      st.markdown("---")
+      res_col1, res_col2 = st.columns(2)
+
+      with res_col1:
+        st.markdown(f"### 👤 {inv1}")
+        st.metric("🏢 Total de Imóveis", f"{len(df1)}")
+        st.metric(
+            "🔥 Maior Desconto",
+            f"{df1['Desconto (%)'].max():.1f}%" if not df1.empty else "0%",
+        )
+        st.metric(
+            "💰 Lucro Total Estimado",
+            f"R$ {df1['Lucro Potencial (R$)'].sum():,.0f}"
+            if not df1.empty
+            else "R$ 0",
+        )
+        st.metric(
+            "🏷️ Ticket Médio",
+            f"R$ {df1['Preço do Leilão (R$)'].mean():,.2f}"
+            if not df1.empty
+            else "R$ 0",
+        )
+
+      with res_col2:
+        st.markdown(f"### 👤 {inv2}")
+        st.metric("🏢 Total de Imóveis", f"{len(df2)}")
+        st.metric(
+            "🔥 Maior Desconto",
+            f"{df2['Desconto (%)'].max():.1f}%" if not df2.empty else "0%",
+        )
+        st.metric(
+            "💰 Lucro Total Estimado",
+            f"R$ {df2['Lucro Potencial (R$)'].sum():,.0f}"
+            if not df2.empty
+            else "R$ 0",
+        )
+        st.metric(
+            "🏷️ Ticket Médio",
+            f"R$ {df2['Preço do Leilão (R$)'].mean():,.2f}"
+            if not df2.empty
+            else "R$ 0",
+        )
 
 elif "df_final" not in st.session_state:
   st.info(
