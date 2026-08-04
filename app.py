@@ -80,12 +80,12 @@ else:
   is_tester = st.session_state["usuario_logado"] == "teste"
 
   # -------------------------------------------------------
-  # BARRA LATERAL (CONTROLES, UPLOAD E LOGOUT)
+  # BARRA LATERAL (OPCIONAL / SUPORTE)
   # -------------------------------------------------------
   with st.sidebar:
     st.title("🏢 Cruzador Pro")
     if is_tester:
-      st.info("⚠️ Modo de Teste: Visualização restrita (Sem downloads).")
+      st.info("⚠️ Modo de Teste: Visualização restrita.")
     else:
       st.caption(f"👤 Conectado: **{st.session_state['usuario_logado']}**")
 
@@ -97,46 +97,7 @@ else:
       st.rerun()
 
     st.divider()
-
-    st.subheader("📂 Enviar Arquivos")
-    file_leiloes = st.file_uploader(
-        "1️⃣ Base de Leilões (.xlsx)", type=["xlsx", "xls"]
-    )
-    file_investidores = st.file_uploader(
-        "2️⃣ Base de Investidores (.xlsx)", type=["xlsx", "xls"]
-    )
-
-    st.divider()
-    st.subheader("⚙️ Parâmetros de Custos")
-    taxa_leiloeiro = (
-        st.number_input(
-            "Comissão Leiloeiro (%)",
-            min_value=0.0,
-            max_value=10.0,
-            value=5.0,
-            step=0.5,
-        )
-        / 100.0
-    )
-    taxa_itbi = (
-        st.number_input(
-            "ITBI / Registro (%)",
-            min_value=0.0,
-            max_value=10.0,
-            value=3.0,
-            step=0.5,
-        )
-        / 100.0
-    )
-    custo_fixo_extra = st.number_input(
-        "Custo Fixo Reforma/Desocupação (R$)",
-        min_value=0,
-        value=15000,
-        step=5000,
-    )
-
-    st.divider()
-    executar = st.button("🚀 Processar Oportunidades", type="primary")
+    st.markdown("💡 *Dica: Se preferir, use os botões centrais na tela.*")
 
   # -------------------------------------------------------
   # ESTILIZAÇÃO CSS CUSTOMIZADA
@@ -166,7 +127,7 @@ else:
         div.stButton > button:first-child:hover {
             background-color: #003D99;
             color: white;
-            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
+            box-shadow:px 4px 12px rgba(0, 0, 0, 0.15);
         }
         
         div[data-testid="stMetric"] {
@@ -552,7 +513,7 @@ else:
     return output.getvalue()
 
   # -------------------------------------------------------
-  # CABEÇALHO PRINCIPAL E DIÁLOGO DE AJUDA
+  # CABEÇALHO PRINCIPAL
   # -------------------------------------------------------
   col_head1, col_head2 = st.columns([4, 1])
   with col_head1:
@@ -567,15 +528,47 @@ else:
     with st.popover("❓ Como Usar"):
       st.markdown("""
             ### 📖 Passo a Passo Simples
-            1. **Carregue as planilhas** no menu lateral à esquerda.
+            1. **Carregue as planilhas** abaixo.
             2. Clique em **🚀 Processar Oportunidades**.
             3. Refine por **Preço, Desconto Mínimo ou Tipo**.
-            4. Navegue pelas **abas**:
-               * 📊 **Visão Geral:** Gráficos e inteligência financeira.
-               * 📋 **Tabela:** Dados completos.
-               * 👤 **Por Investidor:** Vitrine de imóveis.
-               * ⚔️ **Comparativo:** Análise lado a lado de investidores.
+            4. Navegue pelas **abas do dashboard**.
             """)
+
+  st.divider()
+
+  # -------------------------------------------------------
+  # CENTRAL DE UPLOAD NA TELA PRINCIPAL (Garante acesso fácil)
+  # -------------------------------------------------------
+  with st.container():
+    st.subheader("📂 Central de Envio e Parâmetros")
+    up_col1, up_col2, up_col3 = st.columns([1.5, 1.5, 1])
+
+    with up_col1:
+      file_leiloes = st.file_uploader(
+          "1️⃣ Base de Leilões (.xlsx)", type=["xlsx", "xls"]
+      )
+    with up_col2:
+      file_investidores = st.file_uploader(
+          "2️⃣ Base de Investidores (.xlsx)", type=["xlsx", "xls"]
+      )
+    with up_col3:
+      st.write("⚙️ **Custos Ocultos**")
+      taxa_leiloeiro = (
+          st.number_input("Comissão Leiloeiro (%)", 0.0, 10.0, 5.0, 0.5) / 100.0
+      )
+      taxa_itbi = (
+          st.number_input("ITBI / Registro (%)", 0.0, 10.0, 3.0, 0.5) / 100.0
+      )
+      custo_fixo_extra = st.number_input(
+          "Custo Fixo Reforma (R$)", 0, 100000, 15000, 5000
+      )
+
+    st.write(" ")
+    executar = st.button(
+        "🚀 Processar Oportunidades e Cruzar Dados", type="primary"
+    )
+
+  st.divider()
 
   # -------------------------------------------------------
   # LÓGICA DE PROCESSAMENTO E ARMAZENAMENTO EM SESSION
@@ -600,7 +593,6 @@ else:
             axis=1,
         )
 
-        # Desconto Real (>0)
         df_leiloes["desconto_%"] = np.where(
             (pd.notnull(df_leiloes["Valor de Avaliação do Leiloeiro"]))
             & (df_leiloes["Valor de Avaliação do Leiloeiro"] > 0)
@@ -734,7 +726,6 @@ else:
             preco = imovel["preco_effective"]
             avaliac = imovel["Valor de Avaliação do Leiloeiro"]
 
-            # CÁLCULO DE CUSTOS OCULTOS E MARGEM REAL
             custos_adicionais = (
                 (preco * taxa_leiloeiro)
                 + (preco * taxa_itbi)
@@ -781,7 +772,6 @@ else:
   if "df_final" in st.session_state and not st.session_state["df_final"].empty:
     df_base = st.session_state["df_final"]
 
-    # BARRA DE FILTROS DINÂMICOS AVANÇADOS
     with st.expander("🔍 **Filtros Avançados de Refinamento**", expanded=True):
       f_col1, f_col2, f_col3, f_col4 = st.columns([1.2, 1.8, 1.5, 1.5])
 
@@ -824,7 +814,6 @@ else:
             placeholder="Ex: Rio Preto, Simonetti, Casa...",
         )
 
-    # Aplicar Filtros
     df_filtered = df_base[
         (df_base["Desconto (%)"] >= desconto_min)
         & (df_base["Preço do Leilão (R$)"] >= faixa_preco[0])
@@ -842,7 +831,6 @@ else:
           | df_filtered["Título do Imóvel"].apply(normalize).str.contains(termo)
       ]
 
-    # ESTRUTURA DE ABAS
     tab_labels = (
         [
             "📊 Visão Geral & Inteligência",
@@ -861,9 +849,6 @@ else:
 
     tab1, tab2, tab3, tab4 = st.tabs(tab_labels)
 
-    # -------------------------------------------------------
-    # ABA 1: VISÃO GERAL & INTELIGÊNCIA
-    # -------------------------------------------------------
     with tab1:
       st.write(" ")
       kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
@@ -933,9 +918,6 @@ else:
           )
           st.plotly_chart(fig_bar, use_container_width=True)
 
-    # -------------------------------------------------------
-    # ABA 2: TABELA COMPLETA & DOWNLOAD
-    # -------------------------------------------------------
     with tab2:
       st.write(" ")
       if not df_filtered.empty:
@@ -990,9 +972,6 @@ else:
             "Nenhum imóvel encontrado com os filtros selecionados acima."
         )
 
-    # -------------------------------------------------------
-    # ABA 3: CARDS POR INVESTIDOR
-    # -------------------------------------------------------
     with tab3:
       st.write(" ")
       if not df_filtered.empty:
@@ -1113,9 +1092,6 @@ else:
                 unsafe_allow_html=True,
             )
 
-    # -------------------------------------------------------
-    # ABA 4: MODO COMPARATIVO DE INVESTIDORES
-    # -------------------------------------------------------
     with tab4:
       st.write(" ")
       st.subheader("⚔️ Comparativo Direto entre Investidores")
@@ -1183,6 +1159,7 @@ else:
 
   elif "df_final" not in st.session_state:
     st.info(
-        "👈 **Para iniciar:** Faça o upload das duas planilhas no menu lateral e"
-        " clique em **🚀 Processar Oportunidades**."
+        "💡 **Para iniciar:** Faça o upload das duas planilhas e ajuste os"
+        " custos na **Central de Envio** acima, depois clique em **🚀 Processar"
+        " Oportunidades**."
     )
