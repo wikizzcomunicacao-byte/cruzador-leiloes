@@ -11,7 +11,7 @@ import plotly.express as px
 import streamlit as st
 
 # ---------------------------------------------------------
-# 1. CONFIGURAÇÃO DA PÁGINA (Força expandida por padrão)
+# 1. CONFIGURAÇÃO DA PÁGINA
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="Cruzador de Leilões Enterprise",
@@ -78,7 +78,7 @@ if not st.session_state["autenticado"]:
 
 
 # ---------------------------------------------------------
-# 4. ESTILIZAÇÃO CSS CUSTOMIZADA (Barra Lateral Fixa)
+# 4. ESTILIZAÇÃO CSS CUSTOMIZADA (Sem bloqueio de sidebar)
 # ---------------------------------------------------------
 st.markdown(
     """
@@ -86,18 +86,6 @@ st.markdown(
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-    
-    /* FORÇA A BARRA LATERAL A FICAR FIXA E SEMPRE VISÍVEL */
-    [data-testid="stSidebar"] {
-        min-width: 300px !important;
-        max-width: 350px !important;
-        display: block !important;
-    }
-    
-    /* Remove o botão de fechar a barra lateral para mantê-la travada */
-    [data-testid="collapsedControl"] {
-        display: none !important;
-    }
     
     .main .block-container {
         padding-top: 1.5rem;
@@ -955,7 +943,7 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
         st.plotly_chart(fig_bar, use_container_width=True)
 
   # -------------------------------------------------------
-  # ABA 2: TABELA COMPLETA & DOWNLOAD (BLOQUEADO PARA TESTE)
+  # ABA 2: TABELA COMPLETA & DOWNLOAD
   # -------------------------------------------------------
   with tab2:
     st.write(" ")
@@ -1012,7 +1000,7 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
       )
 
   # -------------------------------------------------------
-  # ABA 3: CARDS POR INVESTIDOR & PDF BLOQUEADO PARA TESTE
+  # ABA 3: CARDS POR INVESTIDOR
   # -------------------------------------------------------
   with tab3:
     st.write(" ")
