@@ -78,7 +78,7 @@ if not st.session_state["autenticado"]:
 
 
 # ---------------------------------------------------------
-# 4. ESTILIZAÇÃO CSS CUSTOMIZADA (Sem bloqueio de sidebar)
+# 4. ESTILIZAÇÃO CSS (Força a Barra Lateral a Ficar Visível)
 # ---------------------------------------------------------
 st.markdown(
     """
@@ -86,6 +86,14 @@ st.markdown(
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
+    
+    /* FORÇA A BARRA LATERAL A APARECER E FICAR FIXA */
+    [data-testid="stSidebar"] {
+        display: block !important;
+        visibility: visible !important;
+        transform: none !important;
+        width: 320px !important;
+    }
     
     .main .block-container {
         padding-top: 1.5rem;
