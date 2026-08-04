@@ -263,7 +263,6 @@ def gerar_pdf_investidor(nome_investidor, df_inv):
   pdf = InvestorPDF()
   pdf.add_page()
 
-  # Ficha do Investidor
   pdf.set_font("Arial", "B", 12)
   pdf.set_text_color(30, 41, 59)
   pdf.cell(0, 8, clean_ascii(f"INVESTIDOR: {nome_investidor}"), 0, 1)
@@ -289,7 +288,6 @@ def gerar_pdf_investidor(nome_investidor, df_inv):
   )
   pdf.ln(5)
 
-  # Imóveis em Tabela/Lista
   for idx, row in df_inv.iterrows():
     pdf.set_fill_color(248, 250, 252)
     pdf.set_draw_color(226, 232, 240)
@@ -334,7 +332,8 @@ def gerar_pdf_investidor(nome_investidor, df_inv):
         0,
         5,
         clean_ascii(
-            f" Lucro Estimado: R$ {lucro} | Endereço: {clean_ascii(str(row['Endereço']))[:75]}"
+            f" Lucro Estimado: R$ {lucro} | Endereço:"
+            f" {clean_ascii(str(row['Endereço']))[:75]}"
         ),
         "LBR",
         1,
@@ -918,7 +917,6 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
       for idx, (_, row) in enumerate(df_inv.iterrows()):
         col_target = cols_cards[idx % 2]
 
-        # Lógica de Badges Especiais
         badge_html = ""
         if (
             row["Desconto (%)"] >= 60
