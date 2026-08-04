@@ -11,7 +11,7 @@ import plotly.express as px
 import streamlit as st
 
 # ---------------------------------------------------------
-# 1. CONFIGURAÇÃO DA PÁGINA
+# 1. CONFIGURAÇÃO DA PÁGINA (Força expandida por padrão)
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="Cruzador de Leilões Enterprise",
@@ -21,10 +21,11 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# 2. CREDENCIAIS DE ACESSO
+# 2. CREDENCIAIS DE ACESSO (ADMIN + TESTE)
 # ---------------------------------------------------------
 USUARIOS = {
     "administrador": "22029804",
+    "teste": "teste123",  # Perfil exclusivo de visualização (sem downloads)
 }
 
 # Inicializa o estado de sessão de login
@@ -77,7 +78,7 @@ if not st.session_state["autenticado"]:
 
 
 # ---------------------------------------------------------
-# 4. ESTILIZAÇÃO CSS CUSTOMIZADA (Enterprise Look & Feel)
+# 4. ESTILIZAÇÃO CSS CUSTOMIZADA (Barra Lateral Fixa)
 # ---------------------------------------------------------
 st.markdown(
     """
@@ -85,6 +86,18 @@ st.markdown(
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
+    
+    /* FORÇA A BARRA LATERAL A FICAR FIXA E SEMPRE VISÍVEL */
+    [data-testid="stSidebar"] {
+        min-width: 300px !important;
+        max-width: 350px !important;
+        display: block !important;
+    }
+    
+    /* Remove o botão de fechar a barra lateral para mantê-la travada */
+    [data-testid="collapsedControl"] {
+        display: none !important;
+    }
     
     .main .block-container {
         padding-top: 1.5rem;
@@ -505,7 +518,11 @@ def gerar_excel_profissional(df_input):
 # ---------------------------------------------------------
 with st.sidebar:
   st.title("🏢 Cruzador Pro")
-  st.caption(f"👤 Conectado: **{st.session_state['usuario_logado']}**")
+  is_tester = st.session_state["usuario_logado"] == "teste"
+  if is_tester:
+    st.info("⚠️ Modo de Teste: Visualização restrita (Sem downloads).")
+  else:
+    st.caption(f"👤 Conectado: **{st.session_state['usuario_logado']}**")
 
   if st.button("🚪 Sair / Logout"):
     st.session_state["autenticado"] = False
@@ -578,8 +595,8 @@ with col_head2:
         3. Refine por **Preço, Desconto Mínimo ou Tipo**.
         4. Navegue pelas **abas**:
            * 📊 **Visão Geral:** Gráficos e inteligência financeira.
-           * 📋 **Tabela:** Dados completos e download em Excel.
-           * 👤 **Por Investidor:** Vitrine, **PDF** e envio no **WhatsApp**.
+           * 📋 **Tabela:** Dados completos.
+           * 👤 **Por Investidor:** Vitrine de imóveis.
            * ⚔️ **Comparativo:** Análise lado a lado de investidores.
         """)
 
@@ -847,12 +864,23 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
     ]
 
   # ESTRUTURA DE ABAS
-  tab1, tab2, tab3, tab4 = st.tabs([
-      "📊 Visão Geral & Inteligência",
-      "📋 Tabela Completa & Download",
-      "👤 Cards por Investidor (PDF / WhatsApp)",
-      "⚔️ Modo Comparativo",
-  ])
+  tab_labels = (
+      [
+          "📊 Visão Geral & Inteligência",
+          "📋 Tabela Completa",
+          "👤 Cards por Investidor",
+          "⚔️ Modo Comparativo",
+      ]
+      if is_tester
+      else [
+          "📊 Visão Geral & Inteligência",
+          "📋 Tabela Completa & Download",
+          "👤 Cards por Investidor (PDF / WhatsApp)",
+          "⚔️ Modo Comparativo",
+      ]
+  )
+
+  tab1, tab2, tab3, tab4 = st.tabs(tab_labels)
 
   # -------------------------------------------------------
   # ABA 1: VISÃO GERAL & INTELIGÊNCIA
@@ -927,26 +955,28 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
         st.plotly_chart(fig_bar, use_container_width=True)
 
   # -------------------------------------------------------
-  # ABA 2: TABELA COMPLETA & DOWNLOAD EXCEL
+  # ABA 2: TABELA COMPLETA & DOWNLOAD (BLOQUEADO PARA TESTE)
   # -------------------------------------------------------
   with tab2:
     st.write(" ")
     if not df_filtered.empty:
-      excel_bytes = gerar_excel_profissional(df_filtered)
-
       d_col1, d_col2 = st.columns([3, 1])
       with d_col1:
         st.subheader("📋 Tabela de Oportunidades Consolidadas")
       with d_col2:
-        st.download_button(
-            label="📥 Baixar Excel Formatado",
-            data=excel_bytes,
-            file_name="cruzamento_leiloes_investidores.xlsx",
-            mime=(
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            ),
-            use_container_width=True,
-        )
+        if not is_tester:
+          excel_bytes = gerar_excel_profissional(df_filtered)
+          st.download_button(
+              label="📥 Baixar Excel Formatado",
+              data=excel_bytes,
+              file_name="cruzamento_leiloes_investidores.xlsx",
+              mime=(
+                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              ),
+              use_container_width=True,
+          )
+        else:
+          st.info("🔒 Download em Excel restrito no modo de teste.")
 
       st.dataframe(
           df_filtered,
@@ -982,7 +1012,7 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
       )
 
   # -------------------------------------------------------
-  # ABA 3: CARDS POR INVESTIDOR & WHATSAPP / PDF
+  # ABA 3: CARDS POR INVESTIDOR & PDF BLOQUEADO PARA TESTE
   # -------------------------------------------------------
   with tab3:
     st.write(" ")
@@ -1003,16 +1033,19 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
             df_filtered["Nome do Investidor"] == investidor_sel
         ]
         if not df_inv_curr.empty:
-          pdf_bytes = gerar_pdf_investidor(investidor_sel, df_inv_curr)
-          st.download_button(
-              label="📄 Relatório PDF Corporativo",
-              data=pdf_bytes,
-              file_name=(
-                  f"relatorio_{normalize(investidor_sel).replace(' ', '_')}.pdf"
-              ),
-              mime="application/pdf",
-              use_container_width=True,
-          )
+          if not is_tester:
+            pdf_bytes = gerar_pdf_investidor(investidor_sel, df_inv_curr)
+            st.download_button(
+                label="📄 Relatório PDF Corporativo",
+                data=pdf_bytes,
+                file_name=(
+                    f"relatorio_{normalize(investidor_sel).replace(' ', '_')}.pdf"
+                ),
+                mime="application/pdf",
+                use_container_width=True,
+            )
+          else:
+            st.info("🔒 Relatório em PDF restrito no modo de teste.")
 
       df_inv = df_filtered[
           df_filtered["Nome do Investidor"] == investidor_sel
