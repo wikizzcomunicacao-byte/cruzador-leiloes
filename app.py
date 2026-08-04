@@ -21,7 +21,63 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# 2. ESTILIZAÇÃO CSS CUSTOMIZADA (Enterprise Look & Feel)
+# 2. CREDENCIAIS DE ACESSO
+# ---------------------------------------------------------
+USUARIOS = {
+    "administrador": "22029804",
+}
+
+# Inicializa o estado de sessão de login
+if "autenticado" not in st.session_state:
+  st.session_state["autenticado"] = False
+if "usuario_logado" not in st.session_state:
+  st.session_state["usuario_logado"] = ""
+
+
+# ---------------------------------------------------------
+# 3. TELA DE LOGIN
+# ---------------------------------------------------------
+def tela_login():
+  st.markdown("<br><br><br>", unsafe_allow_html=True)
+  col1, col2, col3 = st.columns([1, 1.4, 1])
+
+  with col2:
+    st.markdown(
+        """
+        <div style="background-color: #FFFFFF; padding: 2.5rem; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
+            <h2 style="text-align: center; color: #0052CC; margin-bottom: 0;">🏢 Cruzador Pro</h2>
+            <p style="text-align: center; color: #64748B; font-size: 0.9rem;">Plataforma de Oportunidades em Leilões</p>
+            <hr style="border: 0.5px solid #E2E8F0; margin-bottom: 1.5rem; margin-top: 1rem;">
+        """,
+        unsafe_allow_html=True,
+    )
+
+    user_input = st.text_input("👤 Usuário", key="login_user")
+    pass_input = st.text_input("🔑 Senha", type="password", key="login_pass")
+
+    st.write(" ")
+    if st.button("🔓 Entrar no Sistema", use_container_width=True):
+      if (
+          user_input in USUARIOS
+          and USUARIOS[user_input] == pass_input
+      ):
+        st.session_state["autenticado"] = True
+        st.session_state["usuario_logado"] = user_input
+        st.rerun()
+      else:
+        st.error("Usuário ou senha incorretos!")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# Se não estiver autenticado, exibe apenas a tela de login e interrompe
+if not st.session_state["autenticado"]:
+  tela_login()
+  st.stop()
+
+
+# ---------------------------------------------------------
+# 4. ESTILIZAÇÃO CSS CUSTOMIZADA (Enterprise Look & Feel)
 # ---------------------------------------------------------
 st.markdown(
     """
@@ -131,24 +187,6 @@ st.markdown(
         color: #9CA3AF;
         text-decoration: line-through;
     }
-    .btn-wsp {
-        background-color: #25D366;
-        color: white;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 6px;
-        font-weight: bold;
-        cursor: pointer;
-        width: 100%;
-        text-align: center;
-        display: block;
-        text-decoration: none;
-        margin-top: 6px;
-    }
-    .btn-wsp:hover {
-        background-color: #1EBE5D;
-        color: white;
-    }
     </style>
 """,
     unsafe_allow_html=True,
@@ -156,7 +194,7 @@ st.markdown(
 
 
 # ---------------------------------------------------------
-# 3. FUNÇÕES AUXILIARES, TRATAMENTO E EXPORTAÇÃO
+# 5. FUNÇÕES AUXILIARES, TRATAMENTO E EXPORTAÇÃO
 # ---------------------------------------------------------
 def clean_ascii(text):
   if not isinstance(text, str):
@@ -463,11 +501,19 @@ def gerar_excel_profissional(df_input):
 
 
 # ---------------------------------------------------------
-# 4. BARRA LATERAL (CONTROLES E UPLOAD)
+# 6. BARRA LATERAL (CONTROLES, UPLOAD E LOGOUT)
 # ---------------------------------------------------------
 with st.sidebar:
   st.title("🏢 Cruzador Pro")
-  st.caption("Painel Inteligente de Oportunidades")
+  st.caption(f"👤 Conectado: **{st.session_state['usuario_logado']}**")
+
+  if st.button("🚪 Sair / Logout"):
+    st.session_state["autenticado"] = False
+    st.session_state["usuario_logado"] = ""
+    if "df_final" in st.session_state:
+      del st.session_state["df_final"]
+    st.rerun()
+
   st.divider()
 
   st.subheader("📂 Enviar Arquivos")
@@ -512,7 +558,7 @@ with st.sidebar:
 
 
 # ---------------------------------------------------------
-# 5. CABEÇALHO PRINCIPAL E DIÁLOGO DE AJUDA
+# 7. CABEÇALHO PRINCIPAL E DIÁLOGO DE AJUDA
 # ---------------------------------------------------------
 col_head1, col_head2 = st.columns([4, 1])
 with col_head1:
@@ -539,7 +585,7 @@ with col_head2:
 
 
 # ---------------------------------------------------------
-# 6. LÓGICA DE PROCESSAMENTO E ARMAZENAMENTO EM SESSION
+# 8. LÓGICA DE PROCESSAMENTO E ARMAZENAMENTO EM SESSION
 # ---------------------------------------------------------
 if file_leiloes and file_investidores and executar:
   with st.spinner("Analisando critérios e cruzando bases de dados..."):
@@ -736,7 +782,7 @@ if file_leiloes and file_investidores and executar:
 
 
 # ---------------------------------------------------------
-# 7. EXIBIÇÃO DO DASHBOARD E ABAS
+# 9. EXIBIÇÃO DO DASHBOARD E ABAS
 # ---------------------------------------------------------
 if "df_final" in st.session_state and not st.session_state["df_final"].empty:
   df_base = st.session_state["df_final"]
@@ -1004,7 +1050,6 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
 
         badge_html += f'<span class="badge-type">🏠 {row["Tipo de Bem"]}</span>'
 
-        # MENSAGEM DO WHATSAPP PRÉ-FORMATADA
         msg_wsp = (
             f"Olá {investidor_sel}! Selecionei uma oportunidade excelente para"
             f" você:\n\n"
