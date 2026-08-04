@@ -342,8 +342,11 @@ def gerar_pdf_investidor(nome_investidor, df_inv):
     )
     pdf.ln(3)
 
-  output_bytes = pdf.output(dest="S").encode("latin-1")
-  return output_bytes
+  # TRATAMENTO UNIVERSAL FPDF1 / FPDF2
+  out = pdf.output()
+  if isinstance(out, str):
+    return out.encode("latin-1")
+  return bytes(out)
 
 
 def gerar_excel_profissional(df_input):
