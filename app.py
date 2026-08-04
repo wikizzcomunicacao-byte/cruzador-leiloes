@@ -1,5 +1,6 @@
 import io
 import re
+from urllib.parse import quote
 from fpdf import FPDF
 import numpy as np
 import openpyxl
@@ -13,19 +14,18 @@ import streamlit as st
 # 1. CONFIGURAÇÃO DA PÁGINA
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="Cruzador de Leilões Pro",
+    page_title="Cruzador de Leilões Enterprise",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # ---------------------------------------------------------
-# 2. ESTILIZAÇÃO CSS CUSTOMIZADA (SaaS Look & Feel)
+# 2. ESTILIZAÇÃO CSS CUSTOMIZADA (Enterprise Look & Feel)
 # ---------------------------------------------------------
 st.markdown(
     """
     <style>
-    /* Oculta menus e rodapé padrão do Streamlit */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
@@ -61,7 +61,7 @@ st.markdown(
         box-shadow: 0 2px 4px rgba(0,0,0,0.04);
     }
     div[data-testid="stMetricValue"] {
-        font-size: 1.7rem;
+        font-size: 1.6rem;
         font-weight: 700;
         color: #0052CC;
     }
@@ -113,7 +113,7 @@ st.markdown(
         margin-bottom: 8px;
     }
     .price-main {
-        font-size: 1.4rem;
+        font-size: 1.35rem;
         font-weight: bold;
         color: #166534;
     }
@@ -122,10 +122,32 @@ st.markdown(
         font-weight: 700;
         color: #2563EB;
     }
+    .price-costs {
+        font-size: 0.88rem;
+        color: #64748B;
+    }
     .price-old {
         font-size: 0.9rem;
         color: #9CA3AF;
         text-decoration: line-through;
+    }
+    .btn-wsp {
+        background-color: #25D366;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-weight: bold;
+        cursor: pointer;
+        width: 100%;
+        text-align: center;
+        display: block;
+        text-decoration: none;
+        margin-top: 6px;
+    }
+    .btn-wsp:hover {
+        background-color: #1EBE5D;
+        color: white;
     }
     </style>
 """,
@@ -313,15 +335,15 @@ def gerar_pdf_investidor(nome_investidor, df_inv):
     cidade = clean_ascii(str(row["Cidade Imóvel"]))
     estado = clean_ascii(str(row["Estado Imóvel"]))
     preco = f"{row['Preço do Leilão (R$)']:,.2f}"
-    avaliac = f"{row['Valor de Avaliação (R$)']:,.2f}"
-    lucro = f"{row['Lucro Potencial (R$)']:,.2f}"
+    custo_total = f"{row['Custo Total Estimado (R$)']:,.2f}"
+    lucro_liq = f"{row['Lucro Líquido Real (R$)']:,.2f}"
 
     pdf.cell(
         0,
         5,
         clean_ascii(
-            f" Local: {cidade} - {estado} | Preço: R$ {preco} (Avaliacao: R$"
-            f" {avaliac})"
+            f" Local: {cidade} - {estado} | Preço Lance: R$ {preco} | Custo"
+            f" Total: R$ {custo_total}"
         ),
         "LR",
         1,
@@ -332,7 +354,7 @@ def gerar_pdf_investidor(nome_investidor, df_inv):
         0,
         5,
         clean_ascii(
-            f" Lucro Estimado: R$ {lucro} | Endereço:"
+            f" Lucro Liq. Estimado: R$ {lucro_liq} | Endereço:"
             f" {clean_ascii(str(row['Endereço']))[:75]}"
         ),
         "LBR",
@@ -342,7 +364,6 @@ def gerar_pdf_investidor(nome_investidor, df_inv):
     )
     pdf.ln(3)
 
-  # TRATAMENTO UNIVERSAL FPDF1 / FPDF2
   out = pdf.output()
   if isinstance(out, str):
     return out.encode("latin-1")
@@ -395,6 +416,7 @@ def gerar_excel_profissional(df_input):
           "Preço" in str(col_name)
           or "Avaliação" in str(col_name)
           or "Lucro" in str(col_name)
+          or "Custo" in str(col_name)
       ):
         for c in cells:
           c.number_format = "R$ #,##0.00"
@@ -426,8 +448,9 @@ def gerar_excel_profissional(df_input):
         "Preço do Leilão (R$)": 22,
         "Valor de Avaliação (R$)": 24,
         "Desconto (%)": 15,
-        "Lucro Potencial (R$)": 22,
-        "ROI Estimado (%)": 16,
+        "Custo Total Estimado (R$)": 24,
+        "Lucro Líquido Real (R$)": 22,
+        "ROI Real (%)": 16,
         "Endereço": 45,
         "Link do Imóvel": 18,
     }
@@ -456,6 +479,35 @@ with st.sidebar:
   )
 
   st.divider()
+  st.subheader("⚙️ Parâmetros de Custos")
+  taxa_leiloeiro = (
+      st.number_input(
+          "Comissão Leiloeiro (%)",
+          min_value=0.0,
+          max_value=10.0,
+          value=5.0,
+          step=0.5,
+      )
+      / 100.0
+  )
+  taxa_itbi = (
+      st.number_input(
+          "ITBI / Registro (%)",
+          min_value=0.0,
+          max_value=10.0,
+          value=3.0,
+          step=0.5,
+      )
+      / 100.0
+  )
+  custo_fixo_extra = st.number_input(
+      "Custo Fixo Reforma/Desocupação (R$)",
+      min_value=0,
+      value=15000,
+      step=5000,
+  )
+
+  st.divider()
   executar = st.button("🚀 Processar Oportunidades", type="primary")
 
 
@@ -481,7 +533,7 @@ with col_head2:
         4. Navegue pelas **abas**:
            * 📊 **Visão Geral:** Gráficos e inteligência financeira.
            * 📋 **Tabela:** Dados completos e download em Excel.
-           * 👤 **Por Investidor:** Vitrine e emissão de **PDF**.
+           * 👤 **Por Investidor:** Vitrine, **PDF** e envio no **WhatsApp**.
            * ⚔️ **Comparativo:** Análise lado a lado de investidores.
         """)
 
@@ -642,12 +694,20 @@ if file_leiloes and file_investidores and executar:
         for _, imovel in sub_sorted.iterrows():
           preco = imovel["preco_effective"]
           avaliac = imovel["Valor de Avaliação do Leiloeiro"]
-          lucro = (
-              avaliac - preco
+
+          # CÁLCULO DE CUSTOS OCULTOS E MARGEM REAL
+          custos_adicionais = (
+              (preco * taxa_leiloeiro)
+              + (preco * taxa_itbi)
+              + custo_fixo_extra
+          )
+          custo_total = preco + custos_adicionais
+          lucro_liquido = (
+              avaliac - custo_total
               if pd.notnull(avaliac) and pd.notnull(preco)
               else 0
           )
-          roi = (lucro / preco) * 100 if preco > 0 else 0
+          roi_real = (lucro_liquido / custo_total) * 100 if custo_total > 0 else 0
 
           resultados.append({
               "ID Investidor": idx + 1,
@@ -661,14 +721,15 @@ if file_leiloes and file_investidores and executar:
               "Preço do Leilão (R$)": preco,
               "Valor de Avaliação (R$)": avaliac,
               "Desconto (%)": round(imovel["desconto_%"], 2),
-              "Lucro Potencial (R$)": round(lucro, 2),
-              "ROI Estimado (%)": round(roi, 1),
+              "Custo Total Estimado (R$)": round(custo_total, 2),
+              "Lucro Líquido Real (R$)": round(lucro_liquido, 2),
+              "ROI Real (%)": round(roi_real, 1),
               "Endereço": imovel["Endereço"],
               "Link do Imóvel": imovel["Link"],
           })
 
       st.session_state["df_final"] = pd.DataFrame(resultados)
-      st.toast("✅ Processamento inteligente concluído!", icon="🎉")
+      st.toast("✅ Processamento Enterprise concluído!", icon="🎉")
 
     except Exception as e:
       st.error(f"Erro ao processar as planilhas: {e}")
@@ -743,7 +804,7 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
   tab1, tab2, tab3, tab4 = st.tabs([
       "📊 Visão Geral & Inteligência",
       "📋 Tabela Completa & Download",
-      "👤 Cards por Investidor (PDF)",
+      "👤 Cards por Investidor (PDF / WhatsApp)",
       "⚔️ Modo Comparativo",
   ])
 
@@ -766,18 +827,18 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
         if not df_filtered.empty
         else "0%",
     )
-    total_lucro = (
-        df_filtered["Lucro Potencial (R$)"].sum()
+    total_lucro_liq = (
+        df_filtered["Lucro Líquido Real (R$)"].sum()
         if not df_filtered.empty
         else 0
     )
-    kpi4.metric("💰 Lucro Estimado Total", f"R$ {total_lucro:,.0f}")
+    kpi4.metric("💰 Lucro Líquido Acumulado", f"R$ {total_lucro_liq:,.0f}")
     avg_price = (
         df_filtered["Preço do Leilão (R$)"].mean()
         if not df_filtered.empty
         else 0
     )
-    kpi5.metric("🏷️ Ticket Médio", f"R$ {avg_price:,.2f}")
+    kpi5.metric("🏷️ Ticket Médio Lance", f"R$ {avg_price:,.2f}")
 
     st.markdown("---")
 
@@ -855,14 +916,17 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
               "Valor de Avaliação (R$)": st.column_config.NumberColumn(
                   "Valor Avaliação", format="R$ %,.2f"
               ),
-              "Lucro Potencial (R$)": st.column_config.NumberColumn(
-                  "Lucro Estimado", format="R$ %,.2f"
+              "Custo Total Estimado (R$)": st.column_config.NumberColumn(
+                  "Custo Total", format="R$ %,.2f"
+              ),
+              "Lucro Líquido Real (R$)": st.column_config.NumberColumn(
+                  "Lucro Líquido Real", format="R$ %,.2f"
               ),
               "Desconto (%)": st.column_config.ProgressColumn(
                   "Desconto (%)", format="%.1f%%", min_value=0, max_value=100
               ),
-              "ROI Estimado (%)": st.column_config.NumberColumn(
-                  "ROI (%)", format="%.1f%%"
+              "ROI Real (%)": st.column_config.NumberColumn(
+                  "ROI Real (%)", format="%.1f%%"
               ),
           },
       )
@@ -872,7 +936,7 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
       )
 
   # -------------------------------------------------------
-  # ABA 3: CARDS POR INVESTIDOR & PDF
+  # ABA 3: CARDS POR INVESTIDOR & WHATSAPP / PDF
   # -------------------------------------------------------
   with tab3:
     st.write(" ")
@@ -895,7 +959,7 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
         if not df_inv_curr.empty:
           pdf_bytes = gerar_pdf_investidor(investidor_sel, df_inv_curr)
           st.download_button(
-              label="📄 Relatório PDF (WhatsApp)",
+              label="📄 Relatório PDF Corporativo",
               data=pdf_bytes,
               file_name=(
                   f"relatorio_{normalize(investidor_sel).replace(' ', '_')}.pdf"
@@ -923,7 +987,7 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
         badge_html = ""
         if (
             row["Desconto (%)"] >= 60
-            and row["Lucro Potencial (R$)"] >= 300000
+            and row["Lucro Líquido Real (R$)"] >= 300000
         ):
           badge_html += (
               '<span class="badge-gold">💎 Oportunidade de Ouro</span>'
@@ -940,6 +1004,20 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
 
         badge_html += f'<span class="badge-type">🏠 {row["Tipo de Bem"]}</span>'
 
+        # MENSAGEM DO WHATSAPP PRÉ-FORMATADA
+        msg_wsp = (
+            f"Olá {investidor_sel}! Selecionei uma oportunidade excelente para"
+            f" você:\n\n"
+            f"🏠 *{row['Título do Imóvel']}*\n"
+            f"📍 Cidade: {row['Cidade Imóvel']} - {row['Estado Imóvel']}\n"
+            f"🔥 Desconto: *{row['Desconto (%)']}% OFF*\n"
+            f"💰 Lance Estimado: R$ {row['Preço do Leilão (R$)']:,.2f}\n"
+            f"🏷️ Custo Total Aprox.: R$ {row['Custo Total Estimado (R$)']:,.2f}\n"
+            f"📈 *Lucro Líquido Estimado: R$ {row['Lucro Líquido Real (R$)']:,.2f}* (ROI: {row['ROI Real (%)']}%)\n\n"
+            f"🔗 Ver Anúncio: {row['Link do Imóvel']}"
+        )
+        url_wsp = f"https://api.whatsapp.com/send?text={quote(msg_wsp)}"
+
         with col_target:
           link_url = (
               row["Link do Imóvel"]
@@ -952,17 +1030,25 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
                 <div class="property-card">
                     {badge_html}
                     <h4 style="margin-top: 8px; margin-bottom: 4px; color: #1E293B;">{row['Título do Imóvel']}</h4>
-                    <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 10px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']}</p>
-                    <div style="margin-bottom: 10px;">
+                    <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']}</p>
+                    <div style="margin-bottom: 8px;">
                         <span class="price-main">R$ {row['Preço do Leilão (R$)']:,.2f}</span> <span class="price-old">(Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f})</span><br>
-                        <span class="price-profit">💰 Lucro Estimado: R$ {row['Lucro Potencial (R$)']:,.2f} (ROI: {row['ROI Estimado (%)']}%)</span>
+                        <span class="price-profit">💰 Lucro Líquido Real: R$ {row['Lucro Líquido Real (R$)']:,.2f} (ROI: {row['ROI Real (%)']}%)</span><br>
+                        <span class="price-costs">🛠️ Custo Total Estimado (com comissão/ITBI/reforma): R$ {row['Custo Total Estimado (R$)']:,.2f}</span>
                     </div>
-                    <p style="font-size: 0.85rem; color: #475569; margin-bottom: 15px;"><b>Endereço:</b> {row['Endereço']}</p>
-                    <a href="{link_url}" target="_blank" style="text-decoration: none;">
-                        <button style="background-color: #0052CC; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%;">
-                            🔗 Abrir Anúncio Oficial
-                        </button>
-                    </a>
+                    <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px;"><b>Endereço:</b> {row['Endereço']}</p>
+                    <div style="display: flex; gap: 8px;">
+                        <a href="{link_url}" target="_blank" style="text-decoration: none; flex: 1;">
+                            <button style="background-color: #0052CC; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%;">
+                                🔗 Ver Anúncio
+                            </button>
+                        </a>
+                        <a href="{url_wsp}" target="_blank" style="text-decoration: none; flex: 1;">
+                            <button style="background-color: #25D366; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%;">
+                                📲 WhatsApp
+                            </button>
+                        </a>
+                    </div>
                 </div>
                 """,
               unsafe_allow_html=True,
@@ -1004,13 +1090,13 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
             f"{df1['Desconto (%)'].max():.1f}%" if not df1.empty else "0%",
         )
         st.metric(
-            "💰 Lucro Total Estimado",
-            f"R$ {df1['Lucro Potencial (R$)'].sum():,.0f}"
+            "💰 Lucro Líquido Real Total",
+            f"R$ {df1['Lucro Líquido Real (R$)'].sum():,.0f}"
             if not df1.empty
             else "R$ 0",
         )
         st.metric(
-            "🏷️ Ticket Médio",
+            "🏷️ Ticket Médio Lance",
             f"R$ {df1['Preço do Leilão (R$)'].mean():,.2f}"
             if not df1.empty
             else "R$ 0",
@@ -1024,13 +1110,13 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
             f"{df2['Desconto (%)'].max():.1f}%" if not df2.empty else "0%",
         )
         st.metric(
-            "💰 Lucro Total Estimado",
-            f"R$ {df2['Lucro Potencial (R$)'].sum():,.0f}"
+            "💰 Lucro Líquido Real Total",
+            f"R$ {df2['Lucro Líquido Real (R$)'].sum():,.0f}"
             if not df2.empty
             else "R$ 0",
         )
         st.metric(
-            "🏷️ Ticket Médio",
+            "🏷️ Ticket Médio Lance",
             f"R$ {df2['Preço do Leilão (R$)'].mean():,.2f}"
             if not df2.empty
             else "R$ 0",
