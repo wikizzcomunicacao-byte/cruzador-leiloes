@@ -1,6 +1,8 @@
 streamlit
 pandas
 openpyxl
-numpy
 plotly
 fpdf2
+numpy
+scikit-learn
+pydeck
