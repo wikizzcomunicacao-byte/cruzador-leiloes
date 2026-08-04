@@ -78,7 +78,7 @@ if not st.session_state["autenticado"]:
 
 
 # ---------------------------------------------------------
-# 4. ESTILIZAÇÃO CSS (Força a Barra Lateral a Ficar Visível)
+# 4. ESTILIZAÇÃO CSS CUSTOMIZADA (Sem quebrar o layout)
 # ---------------------------------------------------------
 st.markdown(
     """
@@ -86,14 +86,6 @@ st.markdown(
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-    
-    /* FORÇA A BARRA LATERAL A APARECER E FICAR FIXA */
-    [data-testid="stSidebar"] {
-        display: block !important;
-        visibility: visible !important;
-        transform: none !important;
-        width: 320px !important;
-    }
     
     .main .block-container {
         padding-top: 1.5rem;
@@ -1158,7 +1150,7 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
 
       with res_col1:
         st.markdown(f"### 👤 {inv1}")
-        st.metric("🏢 Total de Imóveis", f"{len(df1)}")
+        st.metric("🏢 Total Imóveis", f"{len(df1)}")
         st.metric(
             "🔥 Maior Desconto",
             f"{df1['Desconto (%)'].max():.1f}%" if not df1.empty else "0%",
@@ -1178,7 +1170,7 @@ if "df_final" in st.session_state and not st.session_state["df_final"].empty:
 
       with res_col2:
         st.markdown(f"### 👤 {inv2}")
-        st.metric("🏢 Total de Imóveis", f"{len(df2)}")
+        st.metric("🏢 Total Imóveis", f"{len(df2)}")
         st.metric(
             "🔥 Maior Desconto",
             f"{df2['Desconto (%)'].max():.1f}%" if not df2.empty else "0%",
