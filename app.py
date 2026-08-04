@@ -318,9 +318,12 @@ if file_leiloes and file_investidores and executar:
           axis=1,
       )
 
+      # CORREÇÃO: Trava para só calcular desconto se preço > 0 e não for nulo
       df_leiloes["desconto_%"] = np.where(
           (pd.notnull(df_leiloes["Valor de Avaliação do Leiloeiro"]))
-          & (df_leiloes["Valor de Avaliação do Leiloeiro"] > 0),
+          & (df_leiloes["Valor de Avaliação do Leiloeiro"] > 0)
+          & (pd.notnull(df_leiloes["preco_effective"]))
+          & (df_leiloes["preco_effective"] > 0),
           ((
               df_leiloes["Valor de Avaliação do Leiloeiro"]
               - df_leiloes["preco_effective"]
