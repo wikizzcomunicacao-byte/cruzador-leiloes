@@ -536,7 +536,7 @@ else:
   st.divider()
 
   # -------------------------------------------------------
-  # CENTRAL DE UPLOAD NA TELA PRINCIPAL
+  # CENTRAL DE UPLOAD NA TELA PRINCIPAL (Sem Custo Fixo)
   # -------------------------------------------------------
   with st.container():
     st.subheader("📂 Central de Envio e Parâmetros")
@@ -557,9 +557,6 @@ else:
       )
       taxa_itbi = (
           st.number_input("ITBI / Registro (%)", 0.0, 10.0, 3.0, 0.5) / 100.0
-      )
-      custo_fixo_extra = st.number_input(
-          "Custo Fixo Reforma (R$)", 0, 100000, 15000, 5000
       )
 
     st.write(" ")
@@ -725,11 +722,8 @@ else:
             preco = imovel["preco_effective"]
             avaliac = imovel["Valor de Avaliação do Leiloeiro"]
 
-            custos_adicionais = (
-                (preco * taxa_leiloeiro)
-                + (preco * taxa_itbi)
-                + custo_fixo_extra
-            )
+            # Apenas comissão do leiloeiro e ITBI/registro
+            custos_adicionais = (preco * taxa_leiloeiro) + (preco * taxa_itbi)
             custo_total = preco + custos_adicionais
             lucro_liquido = (
                 avaliac - custo_total
@@ -756,9 +750,7 @@ else:
             })
 
         st.session_state["df_final"] = pd.DataFrame(resultados)
-        st.session_state["imoveis_selecionados"] = (
-            []
-        )  # Inicializa lista de favoritos/selecionados
+        st.session_state["imoveis_selecionados"] = []
         st.toast("✅ Processamento Enterprise concluído!", icon="🎉")
 
       except Exception as e:
@@ -829,16 +821,16 @@ else:
     tab_labels = (
         [
             "📊 Visão Geral",
-            "📋 Tabela & Seleção",
+            "📋 Tabela de Oportunidades",
             f"⭐ Selecionados ({num_sel})",
-            "👤 Cards por Investidor",
+            "👤 Vitrine / Cards por Investidor",
         ]
         if is_tester
         else [
             "📊 Visão Geral",
-            "📋 Tabela, Seleção & Download",
+            "📋 Tabela de Oportunidades & Download",
             f"⭐ Selecionados ({num_sel})",
-            "👤 Cards por Investidor (PDF / WhatsApp)",
+            "👤 Vitrine / Cards por Investidor (PDF / WhatsApp)",
         ]
     )
 
@@ -912,11 +904,7 @@ else:
       if not df_filtered.empty:
         d_col1, d_col2 = st.columns([3, 1])
         with d_col1:
-          st.subheader("📋 Tabela de Oportunidades e Seleção de Imóveis")
-          st.caption(
-              "Marque a caixa de seleção à esquerda de cada imóvel para"
-              " adicioná-lo à sua lista de escolhas."
-          )
+          st.subheader("📋 Tabela Consolidada de Oportunidades")
         with d_col2:
           if not is_tester:
             excel_bytes = gerar_excel_profissional(df_filtered)
@@ -932,26 +920,11 @@ else:
           else:
             st.info("🔒 Download em Excel restrito no modo de teste.")
 
-        df_display = df_filtered.copy()
-        df_display.insert(0, "Selecionar", False)
-
-        if "imoveis_selecionados" in st.session_state:
-          titulos_sel = [
-              item["Título do Imóvel"]
-              for item in st.session_state["imoveis_selecionados"]
-          ]
-          df_display["Selecionar"] = df_display["Título do Imóvel"].isin(
-              titulos_sel
-          )
-
-        edited_df = st.data_editor(
-            df_display,
+        st.dataframe(
+            df_filtered,
             use_container_width=True,
-            height=450,
+            height=500,
             column_config={
-                "Selecionar": st.column_config.CheckboxColumn(
-                    "⭐ Escolher", help="Marque para escolher este imóvel"
-                ),
                 "Link do Imóvel": st.column_config.LinkColumn(
                     "Anúncio Oficial", display_text="🔗 Ver Imóvel"
                 ),
@@ -971,15 +944,7 @@ else:
                     "Desconto (%)", format="%.1f%%", min_value=0, max_value=100
                 ),
             },
-            disabled=[c for c in df_display.columns if c != "Selecionar"],
         )
-
-        selecionados_atual = edited_df[edited_df["Selecionar"] == True]
-        st.session_state["imoveis_selecionados"] = (
-            selecionados_atual.drop(columns=["Selecionar"])
-            .to_dict(orient="records")
-        )
-
       else:
         st.warning(
             "Nenhum imóvel encontrado com os filtros selecionados acima."
@@ -989,8 +954,7 @@ else:
       st.write(" ")
       st.subheader("⭐ Seus Imóveis Escolhidos / Selecionados")
       st.markdown(
-          "Aqui estão reunidos todos os imóveis que você marcou na tabela"
-          " ou escolheu para acompanhar."
+          "Aqui estão reunidos todos os imóveis que você marcou na vitrine."
       )
 
       if (
@@ -1038,9 +1002,9 @@ else:
             )
       else:
         st.info(
-            "💡 Nenhum imóvel foi selecionado ainda. Vá até a aba **📋 Tabela,"
-            " Seleção & Download** e marque a caixa de seleção ⭐ Escolher nos"
-            " imóveis de seu interesse."
+            "💡 Nenhum imóvel foi selecionado ainda. Vá até a aba **👤 Vitrine /"
+            " Cards por Investidor** e clique no botão **⭐ Escolher Imóvel**"
+            " nos cards que desejar."
         )
 
     with tab4:
@@ -1132,34 +1096,77 @@ else:
                 else "#"
             )
 
-            st.markdown(
-                f"""
-                <div class="property-card">
-                    {badge_html}
-                    <h4 style="margin-top: 8px; margin-bottom: 4px; color: #1E293B;">{row['Título do Imóvel']}</h4>
-                    <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']}</p>
-                    <div style="margin-bottom: 8px;">
-                        <span class="price-main">R$ {row['Preço do Leilão (R$)']:,.2f}</span> <span class="price-old">(Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f})</span><br>
-                        <span class="price-profit">💰 Lucro Líquido Real: R$ {row['Lucro Líquido Real (R$)']:,.2f}</span><br>
-                        <span class="price-costs">🛠️ Custo Total Estimado (com comissão/ITBI/reforma): R$ {row['Custo Total Estimado (R$)']:,.2f}</span>
-                    </div>
-                    <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px;"><b>Endereço:</b> {row['Endereço']}</p>
-                    <div style="display: flex; gap: 8px;">
-                        <a href="{link_url}" target="_blank" style="text-decoration: none; flex: 1;">
-                            <button style="background-color: #0052CC; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%;">
-                                🔗 Ver Anúncio
-                            </button>
-                        </a>
-                        <a href="{url_wsp}" target="_blank" style="text-decoration: none; flex: 1;">
-                            <button style="background-color: #25D366; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%;">
-                                📲 WhatsApp
-                            </button>
-                        </a>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
+            # Verifica se já está selecionado
+            ja_selecionado = any(
+                item["Título do Imóvel"] == row["Título do Imóvel"]
+                and item["Nome do Investidor"] == row["Nome do Investidor"]
+                for item in st.session_state["imoveis_selecionados"]
             )
+
+            col_btn1, col_btn2, col_btn3 = st.columns(3)
+
+            with col_target:
+              st.markdown(
+                  f"""
+                        <div class="property-card">
+                            {badge_html}
+                            <h4 style="margin-top: 8px; margin-bottom: 4px; color: #1E293B;">{row['Título do Imóvel']}</h4>
+                            <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']}</p>
+                            <div style="margin-bottom: 8px;">
+                                <span class="price-main">R$ {row['Preço do Leilão (R$)']:,.2f}</span> <span class="price-old">(Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f})</span><br>
+                                <span class="price-profit">💰 Lucro Líquido Real: R$ {row['Lucro Líquido Real (R$)']:,.2f}</span><br>
+                                <span class="price-costs">🛠️ Custo Total Estimado (com comissão/ITBI): R$ {row['Custo Total Estimado (R$)']:,.2f}</span>
+                            </div>
+                            <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px;"><b>Endereço:</b> {row['Endereço']}</p>
+                        </div>
+                        """,
+                  unsafe_allow_html=True,
+              )
+
+              b_col1, b_col2 = st.columns(2)
+              with b_col1:
+                if st.button(
+                    (
+                        "⭐ Remover dos Escolhidos"
+                        if ja_selecionado
+                        else "⭐ Escolher Imóvel"
+                    ),
+                    key=f"btn_sel_{idx}_{row['Título do Imóvel']}",
+                ):
+                  if ja_selecionado:
+                    st.session_state["imoveis_selecionados"] = [
+                        item
+                        for item in st.session_state["imoveis_selecionados"]
+                        if not (
+                            item["Título do Imóvel"] == row["Título do Imóvel"]
+                            and item["Nome do Investidor"]
+                            == row["Nome do Investidor"]
+                        )
+                    ]
+                  else:
+                    st.session_state["imoveis_selecionados"].append(
+                        row.to_dict()
+                    )
+                  st.rerun()
+
+              with b_col2:
+                st.markdown(
+                    f"""
+                            <div style="display: flex; gap: 8px;">
+                                <a href="{link_url}" target="_blank" style="text-decoration: none; flex: 1;">
+                                    <button style="background-color: #0052CC; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%;">
+                                        🔗 Ver Anúncio
+                                    </button>
+                                </a>
+                                <a href="{url_wsp}" target="_blank" style="text-decoration: none; flex: 1;">
+                                    <button style="background-color: #25D366; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%;">
+                                        📲 WhatsApp
+                                    </button>
+                                </a>
+                            </div>
+                            """,
+                    unsafe_allow_html=True,
+                )
 
   elif "df_final" not in st.session_state:
     st.info(
