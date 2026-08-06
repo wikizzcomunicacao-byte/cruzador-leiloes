@@ -536,7 +536,7 @@ else:
   st.divider()
 
   # -------------------------------------------------------
-  # CENTRAL DE UPLOAD NA TELA PRINCIPAL (Sem Custo Fixo)
+  # CENTRAL DE UPLOAD NA TELA PRINCIPAL
   # -------------------------------------------------------
   with st.container():
     st.subheader("📂 Central de Envio e Parâmetros")
@@ -722,7 +722,6 @@ else:
             preco = imovel["preco_effective"]
             avaliac = imovel["Valor de Avaliação do Leiloeiro"]
 
-            # Apenas comissão do leiloeiro e ITBI/registro
             custos_adicionais = (preco * taxa_leiloeiro) + (preco * taxa_itbi)
             custo_total = preco + custos_adicionais
             lucro_liquido = (
@@ -1052,74 +1051,76 @@ else:
 
         st.write(" ")
 
-        cols_cards = st.columns(2)
-        for idx, (_, row) in enumerate(df_inv.iterrows()):
-          col_target = cols_cards[idx % 2]
 
-          badge_html = ""
-          if (
-              row["Desconto (%)"] >= 60
-              and row["Lucro Líquido Real (R$)"] >= 300000
-          ):
+        # Fragmento otimizado para renderizar e isolar o clique dos cards instantaneamente
+        @st.fragment
+        def renderizar_vitrine(df_cards):
+          cols_cards = st.columns(2)
+          for idx, (_, row) in enumerate(df_cards.iterrows()):
+            col_target = cols_cards[idx % 2]
+
+            badge_html = ""
+            if (
+                row["Desconto (%)"] >= 60
+                and row["Lucro Líquido Real (R$)"] >= 300000
+            ):
+              badge_html += (
+                  '<span class="badge-gold">💎 Oportunidade de Ouro</span>'
+              )
+            elif row["Desconto (%)"] >= 50:
+              badge_html += (
+                  f'<span class="badge-discount">🔥 {row["Desconto (%)"]}%'
+                  ' OFF</span>'
+              )
+            else:
+              badge_html += (
+                  f'<span class="badge-discount">{row["Desconto (%)"]}% OFF</span>'
+              )
+
             badge_html += (
-                '<span class="badge-gold">💎 Oportunidade de Ouro</span>'
-            )
-          elif row["Desconto (%)"] >= 50:
-            badge_html += (
-                f'<span class="badge-discount">🔥 {row["Desconto (%)"]}%'
-                ' OFF</span>'
-            )
-          else:
-            badge_html += (
-                f'<span class="badge-discount">{row["Desconto (%)"]}% OFF</span>'
+                f'<span class="badge-type">🏠 {row["Tipo de Bem"]}</span>'
             )
 
-          badge_html += f'<span class="badge-type">🏠 {row["Tipo de Bem"]}</span>'
-
-          msg_wsp = (
-              f"Olá {investidor_sel}! Selecionei uma oportunidade excelente para"
-              f" você:\n\n"
-              f"🏠 *{row['Título do Imóvel']}*\n"
-              f"📍 Cidade: {row['Cidade Imóvel']} - {row['Estado Imóvel']}\n"
-              f"🔥 Desconto: *{row['Desconto (%)']}% OFF*\n"
-              f"💰 Lance Estimado: R$ {row['Preço do Leilão (R$)']:,.2f}\n"
-              f"🏷️ Custo Total Aprox.: R$ {row['Custo Total Estimado (R$)']:,.2f}\n"
-              f"📈 *Lucro Líquido Estimado: R$ {row['Lucro Líquido Real (R$)']:,.2f}*\n\n"
-              f"🔗 Ver Anúncio: {row['Link do Imóvel']}"
-          )
-          url_wsp = f"https://api.whatsapp.com/send?text={quote(msg_wsp)}"
-
-          with col_target:
-            link_url = (
-                row["Link do Imóvel"]
-                if str(row["Link do Imóvel"]).startswith("http")
-                else "#"
+            msg_wsp = (
+                f"Olá {investidor_sel}! Selecionei uma oportunidade excelente"
+                f" para você:\n\n"
+                f"🏠 *{row['Título do Imóvel']}*\n"
+                f"📍 Cidade: {row['Cidade Imóvel']} - {row['Estado Imóvel']}\n"
+                f"🔥 Desconto: *{row['Desconto (%)']}% OFF*\n"
+                f"💰 Lance Estimado: R$ {row['Preço do Leilão (R$)']:,.2f}\n"
+                f"🏷️ Custo Total Aprox.: R$ {row['Custo Total Estimado (R$)']:,.2f}\n"
+                f"📈 *Lucro Líquido Estimado: R$ {row['Lucro Líquido Real (R$)']:,.2f}*\n\n"
+                f"🔗 Ver Anúncio: {row['Link do Imóvel']}"
             )
-
-            # Verifica se já está selecionado
-            ja_selecionado = any(
-                item["Título do Imóvel"] == row["Título do Imóvel"]
-                and item["Nome do Investidor"] == row["Nome do Investidor"]
-                for item in st.session_state["imoveis_selecionados"]
-            )
-
-            col_btn1, col_btn2, col_btn3 = st.columns(3)
+            url_wsp = f"https://api.whatsapp.com/send?text={quote(msg_wsp)}"
 
             with col_target:
+              link_url = (
+                  row["Link do Imóvel"]
+                  if str(row["Link do Imóvel"]).startswith("http")
+                  else "#"
+              )
+
+              ja_selecionado = any(
+                  item["Título do Imóvel"] == row["Título do Imóvel"]
+                  and item["Nome do Investidor"] == row["Nome do Investidor"]
+                  for item in st.session_state["imoveis_selecionados"]
+              )
+
               st.markdown(
                   f"""
-                        <div class="property-card">
-                            {badge_html}
-                            <h4 style="margin-top: 8px; margin-bottom: 4px; color: #1E293B;">{row['Título do Imóvel']}</h4>
-                            <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']}</p>
-                            <div style="margin-bottom: 8px;">
-                                <span class="price-main">R$ {row['Preço do Leilão (R$)']:,.2f}</span> <span class="price-old">(Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f})</span><br>
-                                <span class="price-profit">💰 Lucro Líquido Real: R$ {row['Lucro Líquido Real (R$)']:,.2f}</span><br>
-                                <span class="price-costs">🛠️ Custo Total Estimado (com comissão/ITBI): R$ {row['Custo Total Estimado (R$)']:,.2f}</span>
+                            <div class="property-card">
+                                {badge_html}
+                                <h4 style="margin-top: 8px; margin-bottom: 4px; color: #1E293B;">{row['Título do Imóvel']}</h4>
+                                <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']}</p>
+                                <div style="margin-bottom: 8px;">
+                                    <span class="price-main">R$ {row['Preço do Leilão (R$)']:,.2f}</span> <span class="price-old">(Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f})</span><br>
+                                    <span class="price-profit">💰 Lucro Líquido Real: R$ {row['Lucro Líquido Real (R$)']:,.2f}</span><br>
+                                    <span class="price-costs">🛠️ Custo Total Estimado (com comissão/ITBI): R$ {row['Custo Total Estimado (R$)']:,.2f}</span>
+                                </div>
+                                <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px;"><b>Endereço:</b> {row['Endereço']}</p>
                             </div>
-                            <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px;"><b>Endereço:</b> {row['Endereço']}</p>
-                        </div>
-                        """,
+                            """,
                   unsafe_allow_html=True,
               )
 
@@ -1152,21 +1153,24 @@ else:
               with b_col2:
                 st.markdown(
                     f"""
-                            <div style="display: flex; gap: 8px;">
-                                <a href="{link_url}" target="_blank" style="text-decoration: none; flex: 1;">
-                                    <button style="background-color: #0052CC; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%;">
-                                        🔗 Ver Anúncio
-                                    </button>
-                                </a>
-                                <a href="{url_wsp}" target="_blank" style="text-decoration: none; flex: 1;">
-                                    <button style="background-color: #25D366; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%;">
-                                        📲 WhatsApp
-                                    </button>
-                                </a>
-                            </div>
-                            """,
+                                <div style="display: flex; gap: 8px;">
+                                    <a href="{link_url}" target="_blank" style="text-decoration: none; flex: 1;">
+                                        <button style="background-color: #0052CC; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%;">
+                                            🔗 Ver Anúncio
+                                        </button>
+                                    </a>
+                                    <a href="{url_wsp}" target="_blank" style="text-decoration: none; flex: 1;">
+                                        <button style="background-color: #25D366; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%;">
+                                            📲 WhatsApp
+                                        </button>
+                                    </a>
+                                </div>
+                                """,
                     unsafe_allow_html=True,
                 )
+
+
+        renderizar_vitrine(df_inv)
 
   elif "df_final" not in st.session_state:
     st.info(
