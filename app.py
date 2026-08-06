@@ -951,10 +951,29 @@ else:
 
     with tab3:
       st.write(" ")
-      st.subheader("⭐ Seus Imóveis Escolhidos / Selecionados")
-      st.markdown(
-          "Aqui estão reunidos todos os imóveis que você marcou na vitrine."
-      )
+      s_col1, s_col2 = st.columns([3, 1])
+      with s_col1:
+        st.subheader("⭐ Seus Imóveis Escolhidos / Selecionados")
+        st.markdown(
+            "Aqui estão reunidos todos os imóveis que você marcou na vitrine."
+        )
+      with s_col2:
+        if (
+            "imoveis_selecionados" in st.session_state
+            and st.session_state["imoveis_selecionados"]
+            and not is_tester
+        ):
+          df_sel_exp = pd.DataFrame(st.session_state["imoveis_selecionados"])
+          excel_sel_bytes = gerar_excel_profissional(df_sel_exp)
+          st.download_button(
+              label="📥 Baixar Selecionados (Excel)",
+              data=excel_sel_bytes,
+              file_name="imoveis_selecionados.xlsx",
+              mime=(
+                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              ),
+              use_container_width=True,
+          )
 
       if (
           "imoveis_selecionados" in st.session_state
@@ -1052,7 +1071,6 @@ else:
         st.write(" ")
 
 
-        # Fragmento otimizado para renderizar e isolar o clique dos cards instantaneamente
         @st.fragment
         def renderizar_vitrine(df_cards):
           cols_cards = st.columns(2)
