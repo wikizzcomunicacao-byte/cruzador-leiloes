@@ -1,3 +1,4 @@
+from datetime import datetime
 import io
 import re
 from urllib.parse import quote
@@ -58,10 +59,7 @@ def tela_login():
 
     st.write(" ")
     if st.button("🔓 Entrar no Sistema", use_container_width=True):
-      if (
-          user_input in USUARIOS
-          and USUARIOS[user_input] == pass_input
-      ):
+      if user_input in USUARIOS and USUARIOS[user_input] == pass_input:
         st.session_state["autenticado"] = True
         st.session_state["usuario_logado"] = user_input
         st.rerun()
@@ -94,6 +92,8 @@ else:
       st.session_state["usuario_logado"] = ""
       if "df_final" in st.session_state:
         del st.session_state["df_final"]
+      if "imoveis_selecionados" in st.session_state:
+        del st.session_state["imoveis_selecionados"]
       st.rerun()
 
     st.divider()
@@ -127,7 +127,7 @@ else:
         div.stButton > button:first-child:hover {
             background-color: #003D99;
             color: white;
-            box-shadow:px 4px 12px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
         
         div[data-testid="stMetric"] {
@@ -472,7 +472,7 @@ else:
           for c in cells:
             c.number_format = "R$ #,##0.00"
             c.alignment = align_right
-        elif "Desconto" in str(col_name) or "ROI" in str(col_name):
+        elif "Desconto" in str(col_name):
           for c in cells:
             c.number_format = '0.00"%"'
             c.alignment = align_right
@@ -501,7 +501,6 @@ else:
           "Desconto (%)": 15,
           "Custo Total Estimado (R$)": 24,
           "Lucro Líquido Real (R$)": 22,
-          "ROI Real (%)": 16,
           "Endereço": 45,
           "Link do Imóvel": 18,
       }
@@ -537,7 +536,7 @@ else:
   st.divider()
 
   # -------------------------------------------------------
-  # CENTRAL DE UPLOAD NA TELA PRINCIPAL (Garante acesso fácil)
+  # CENTRAL DE UPLOAD NA TELA PRINCIPAL
   # -------------------------------------------------------
   with st.container():
     st.subheader("📂 Central de Envio e Parâmetros")
@@ -737,9 +736,6 @@ else:
                 if pd.notnull(avaliac) and pd.notnull(preco)
                 else 0
             )
-            roi_real = (
-                (lucro_liquido / custo_total) * 100 if custo_total > 0 else 0
-            )
 
             resultados.append({
                 "ID Investidor": idx + 1,
@@ -755,19 +751,21 @@ else:
                 "Desconto (%)": round(imovel["desconto_%"], 2),
                 "Custo Total Estimado (R$)": round(custo_total, 2),
                 "Lucro Líquido Real (R$)": round(lucro_liquido, 2),
-                "ROI Real (%)": round(roi_real, 1),
                 "Endereço": imovel["Endereço"],
                 "Link do Imóvel": imovel["Link"],
             })
 
         st.session_state["df_final"] = pd.DataFrame(resultados)
+        st.session_state["imoveis_selecionados"] = (
+            []
+        )  # Inicializa lista de favoritos/selecionados
         st.toast("✅ Processamento Enterprise concluído!", icon="🎉")
 
       except Exception as e:
         st.error(f"Erro ao processar as planilhas: {e}")
 
   # -------------------------------------------------------
-  # 9. EXIBIÇÃO DO DASHBOARD E ABAS
+  # EXIBIÇÃO DO DASHBOARD E ABAS
   # -------------------------------------------------------
   if "df_final" in st.session_state and not st.session_state["df_final"].empty:
     df_base = st.session_state["df_final"]
@@ -831,27 +829,36 @@ else:
           | df_filtered["Título do Imóvel"].apply(normalize).str.contains(termo)
       ]
 
+    # Aba extra para gerenciar imóveis selecionados/escolhidos
+    num_sel = (
+        len(st.session_state["imoveis_selecionados"])
+        if "imoveis_selecionados" in st.session_state
+        else 0
+    )
+
     tab_labels = (
         [
-            "📊 Visão Geral & Inteligência",
-            "📋 Tabela Completa",
+            "📊 Visão Geral",
+            "📋 Tabela & Seleção",
+            f"⭐ Selecionados ({num_sel})",
             "👤 Cards por Investidor",
-            "⚔️ Modo Comparativo",
+            "⚔️ Comparativo",
         ]
         if is_tester
         else [
-            "📊 Visão Geral & Inteligência",
-            "📋 Tabela Completa & Download",
+            "📊 Visão Geral",
+            "📋 Tabela, Seleção & Download",
+            f"⭐ Selecionados ({num_sel})",
             "👤 Cards por Investidor (PDF / WhatsApp)",
-            "⚔️ Modo Comparativo",
+            "⚔️ Comparativo",
         ]
     )
 
-    tab1, tab2, tab3, tab4 = st.tabs(tab_labels)
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(tab_labels)
 
     with tab1:
       st.write(" ")
-      kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
+      kpi1, kpi2, kpi3, kpi4 = st.columns(4)
       kpi1.metric("🏢 Total Imóveis", f"{len(df_filtered):,}")
       kpi2.metric(
           "👥 Investidores",
@@ -871,12 +878,6 @@ else:
           else 0
       )
       kpi4.metric("💰 Lucro Líquido Acumulado", f"R$ {total_lucro_liq:,.0f}")
-      avg_price = (
-          df_filtered["Preço do Leilão (R$)"].mean()
-          if not df_filtered.empty
-          else 0
-      )
-      kpi5.metric("🏷️ Ticket Médio Lance", f"R$ {avg_price:,.2f}")
 
       st.markdown("---")
 
@@ -923,7 +924,11 @@ else:
       if not df_filtered.empty:
         d_col1, d_col2 = st.columns([3, 1])
         with d_col1:
-          st.subheader("📋 Tabela de Oportunidades Consolidadas")
+          st.subheader("📋 Tabela de Oportunidades e Seleção de Imóveis")
+          st.caption(
+              "Marque a caixa de seleção à esquerda de cada imóvel para"
+              " adicioná-lo à sua lista de escolhas."
+          )
         with d_col2:
           if not is_tester:
             excel_bytes = gerar_excel_profissional(df_filtered)
@@ -939,11 +944,28 @@ else:
           else:
             st.info("🔒 Download em Excel restrito no modo de teste.")
 
-        st.dataframe(
-            df_filtered,
+        # Adiciona coluna de seleção interativa na tabela
+        df_display = df_filtered.copy()
+        df_display.insert(0, "Selecionar", False)
+
+        # Atualiza o estado dos imóveis já selecionados
+        if "imoveis_selecionados" in st.session_state:
+          titulos_sel = [
+              item["Título do Imóvel"]
+              for item in st.session_state["imoveis_selecionados"]
+          ]
+          df_display["Selecionar"] = df_display["Título do Imóvel"].isin(
+              titulos_sel
+          )
+
+        edited_df = st.data_editor(
+            df_display,
             use_container_width=True,
-            height=500,
+            height=450,
             column_config={
+                "Selecionar": st.column_config.CheckboxColumn(
+                    "⭐ Escolher", help="Marque para escolher este imóvel"
+                ),
                 "Link do Imóvel": st.column_config.LinkColumn(
                     "Anúncio Oficial", display_text="🔗 Ver Imóvel"
                 ),
@@ -962,17 +984,84 @@ else:
                 "Desconto (%)": st.column_config.ProgressColumn(
                     "Desconto (%)", format="%.1f%%", min_value=0, max_value=100
                 ),
-                "ROI Real (%)": st.column_config.NumberColumn(
-                    "ROI Real (%)", format="%.1f%%"
-                ),
             },
+            disabled=[
+                c for c in df_display.columns if c != "Selecionar"
+            ],  # Só permite editar a caixa de seleção
         )
+
+        # Salva na sessão os imóveis marcados
+        selecionados_atual = edited_df[edited_df["Selecionar"] == True]
+        st.session_state["imoveis_selecionados"] = (
+            selecionados_atual.drop(columns=["Selecionar"])
+            .to_dict(orient="records")
+        )
+
       else:
         st.warning(
             "Nenhum imóvel encontrado com os filtros selecionados acima."
         )
 
     with tab3:
+      st.write(" ")
+      st.subheader("⭐ Seus Imóveis Escolhidos / Selecionados")
+      st.markdown(
+          "Aqui estão reunidos todos os imóveis que você marcou na tabela"
+          " ou escolheu para acompanhar."
+      )
+
+      if (
+          "imoveis_selecionados" in st.session_state
+          and st.session_state["imoveis_selecionados"]
+      ):
+        df_sel = pd.DataFrame(st.session_state["imoveis_selecionados"])
+
+        # Botão para limpar seleções
+        if st.button("🗑️ Limpar Todos os Selecionados"):
+          st.session_state["imoveis_selecionados"] = []
+          st.rerun()
+
+        st.write(" ")
+
+        cols_sel = st.columns(2)
+        for idx, row in df_sel.iterrows():
+          col_target = cols_sel[idx % 2]
+          link_url = (
+              row["Link do Imóvel"]
+              if str(row["Link do Imóvel"]).startswith("http")
+              else "#"
+          )
+
+          with col_target:
+            st.markdown(
+                f"""
+                        <div class="property-card">
+                            <span class="badge-discount">⭐ Escolhido ({row['Desconto (%)']}% OFF)</span>
+                            <span class="badge-type">🏠 {row['Tipo de Bem']}</span>
+                            <h4 style="margin-top: 8px; margin-bottom: 4px; color: #1E293B;">{row['Título do Imóvel']}</h4>
+                            <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']} | Pretendente: <b>{row['Nome do Investidor']}</b></p>
+                            <div style="margin-bottom: 8px;">
+                                <span class="price-main">R$ {row['Preço do Leilão (R$)']:,.2f}</span> <span class="price-old">(Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f})</span><br>
+                                <span class="price-profit">💰 Lucro Líquido Real: R$ {row['Lucro Líquido Real (R$)']:,.2f}</span>
+                            </div>
+                            <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px;"><b>Endereço:</b> {row['Endereço']}</p>
+                            <a href="{link_url}" target="_blank" style="text-decoration: none;">
+                                <button style="background-color: #0052CC; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%;">
+                                    🔗 Ver Anúncio Oficial
+                                </button>
+                            </a>
+                        </div>
+                        """,
+                unsafe_allow_html=True,
+            )
+      else:
+        st.info(
+            "💡 Nenhum imóvel foi selecionado ainda. Vá até a aba **📋 Tabela,"
+            " Seleção & Download** e marque a caixa de seleção ⭐ Escolher nos"
+            " imóveis de seu interesse."
+        )
+
+    with tab4:
       st.write(" ")
       if not df_filtered.empty:
         investidores_lista = sorted(
@@ -1039,9 +1128,7 @@ else:
                 f'<span class="badge-discount">{row["Desconto (%)"]}% OFF</span>'
             )
 
-          badge_html += (
-              f'<span class="badge-type">🏠 {row["Tipo de Bem"]}</span>'
-          )
+          badge_html += f'<span class="badge-type">🏠 {row["Tipo de Bem"]}</span>'
 
           msg_wsp = (
               f"Olá {investidor_sel}! Selecionei uma oportunidade excelente para"
@@ -1051,7 +1138,7 @@ else:
               f"🔥 Desconto: *{row['Desconto (%)']}% OFF*\n"
               f"💰 Lance Estimado: R$ {row['Preço do Leilão (R$)']:,.2f}\n"
               f"🏷️ Custo Total Aprox.: R$ {row['Custo Total Estimado (R$)']:,.2f}\n"
-              f"📈 *Lucro Líquido Estimado: R$ {row['Lucro Líquido Real (R$)']:,.2f}* (ROI: {row['ROI Real (%)']}%)\n\n"
+              f"📈 *Lucro Líquido Estimado: R$ {row['Lucro Líquido Real (R$)']:,.2f}*\n\n"
               f"🔗 Ver Anúncio: {row['Link do Imóvel']}"
           )
           url_wsp = f"https://api.whatsapp.com/send?text={quote(msg_wsp)}"
@@ -1071,7 +1158,7 @@ else:
                     <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']}</p>
                     <div style="margin-bottom: 8px;">
                         <span class="price-main">R$ {row['Preço do Leilão (R$)']:,.2f}</span> <span class="price-old">(Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f})</span><br>
-                        <span class="price-profit">💰 Lucro Líquido Real: R$ {row['Lucro Líquido Real (R$)']:,.2f} (ROI: {row['ROI Real (%)']}%)</span><br>
+                        <span class="price-profit">💰 Lucro Líquido Real: R$ {row['Lucro Líquido Real (R$)']:,.2f}</span><br>
                         <span class="price-costs">🛠️ Custo Total Estimado (com comissão/ITBI/reforma): R$ {row['Custo Total Estimado (R$)']:,.2f}</span>
                     </div>
                     <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px;"><b>Endereço:</b> {row['Endereço']}</p>
@@ -1092,7 +1179,7 @@ else:
                 unsafe_allow_html=True,
             )
 
-    with tab4:
+    with tab5:
       st.write(" ")
       st.subheader("⚔️ Comparativo Direto entre Investidores")
       st.caption("Compare critérios e oportunidades encontradas lado a lado.")
