@@ -156,28 +156,6 @@ else:
             transform: translateY(-2px);
             box-shadow: 0 4px 14px rgba(0,0,0,0.1);
         }
-        .badge-gold {
-            background-color: #D97706;
-            color: white;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.82rem;
-            font-weight: bold;
-            display: inline-block;
-            margin-bottom: 8px;
-            margin-right: 4px;
-        }
-        .badge-discount {
-            background-color: #DC2626;
-            color: white;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.82rem;
-            font-weight: bold;
-            display: inline-block;
-            margin-bottom: 8px;
-            margin-right: 4px;
-        }
         .badge-type {
             background-color: #E0E7FF;
             color: #3730A3;
@@ -951,7 +929,7 @@ else:
 
     with tab3:
       st.write(" ")
-      s_col1, s_col2 = st.columns([3, 1])
+      s_col1, s_col2, s_col3 = st.columns([2, 1.5, 1.5])
       with s_col1:
         st.subheader("⭐ Seus Imóveis Escolhidos / Selecionados")
         st.markdown(
@@ -963,15 +941,34 @@ else:
             and st.session_state["imoveis_selecionados"]
             and not is_tester
         ):
+          st.write(" ")
           df_sel_exp = pd.DataFrame(st.session_state["imoveis_selecionados"])
           excel_sel_bytes = gerar_excel_profissional(df_sel_exp)
           st.download_button(
-              label="📥 Baixar Selecionados (Excel)",
+              label="📥 Baixar Excel Selecionados",
               data=excel_sel_bytes,
               file_name="imoveis_selecionados.xlsx",
               mime=(
                   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               ),
+              use_container_width=True,
+          )
+      with s_col3:
+        if (
+            "imoveis_selecionados" in st.session_state
+            and st.session_state["imoveis_selecionados"]
+            and not is_tester
+        ):
+          st.write(" ")
+          df_sel_exp = pd.DataFrame(st.session_state["imoveis_selecionados"])
+          pdf_sel_bytes = gerar_pdf_investidor(
+              "Imóveis Selecionados", df_sel_exp
+          )
+          st.download_button(
+              label="📄 Baixar PDF Corporativo",
+              data=pdf_sel_bytes,
+              file_name="imoveis_selecionados.pdf",
+              mime="application/pdf",
               use_container_width=True,
           )
 
@@ -1000,7 +997,6 @@ else:
             st.markdown(
                 f"""
                         <div class="property-card">
-                            <span class="badge-discount">⭐ Escolhido ({row['Desconto (%)']}% OFF)</span>
                             <span class="badge-type">🏠 {row['Tipo de Bem']}</span>
                             <h4 style="margin-top: 8px; margin-bottom: 4px; color: #1E293B;">{row['Título do Imóvel']}</h4>
                             <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']} | Pretendente: <b>{row['Nome do Investidor']}</b></p>
@@ -1032,7 +1028,7 @@ else:
             df_filtered["Nome do Investidor"].unique().tolist()
         )
 
-        c_sel1, c_sel2 = st.columns([3, 1])
+        c_sel1, c_sel2, c_sel3 = st.columns([2, 1, 1])
         with c_sel1:
           investidor_sel = st.selectbox(
               "👤 Selecione o Investidor:",
@@ -1047,16 +1043,32 @@ else:
             if not is_tester:
               pdf_bytes = gerar_pdf_investidor(investidor_sel, df_inv_curr)
               st.download_button(
-                  label="📄 Relatório PDF Corporativo",
+                  label="📄 PDF Corporativo 1",
                   data=pdf_bytes,
                   file_name=(
-                      f"relatorio_{normalize(investidor_sel).replace(' ', '_')}.pdf"
+                      f"relatorio_1_{normalize(investidor_sel).replace(' ', '_')}.pdf"
                   ),
                   mime="application/pdf",
                   use_container_width=True,
               )
             else:
-              st.info("🔒 Relatório em PDF restrito no modo de teste.")
+              st.info("🔒 PDF restrito.")
+        with c_sel3:
+          st.write(" ")
+          if not df_inv_curr.empty:
+            if not is_tester:
+              pdf_bytes2 = gerar_pdf_investidor(investidor_sel, df_inv_curr)
+              st.download_button(
+                  label="📄 PDF Corporativo 2",
+                  data=pdf_bytes2,
+                  file_name=(
+                      f"relatorio_2_{normalize(investidor_sel).replace(' ', '_')}.pdf"
+                  ),
+                  mime="application/pdf",
+                  use_container_width=True,
+              )
+            else:
+              st.info("🔒 PDF restrito.")
 
         df_inv = df_filtered[
             df_filtered["Nome do Investidor"] == investidor_sel
@@ -1077,34 +1089,13 @@ else:
           for idx, (_, row) in enumerate(df_cards.iterrows()):
             col_target = cols_cards[idx % 2]
 
-            badge_html = ""
-            if (
-                row["Desconto (%)"] >= 60
-                and row["Lucro Líquido Real (R$)"] >= 300000
-            ):
-              badge_html += (
-                  '<span class="badge-gold">💎 Oportunidade de Ouro</span>'
-              )
-            elif row["Desconto (%)"] >= 50:
-              badge_html += (
-                  f'<span class="badge-discount">🔥 {row["Desconto (%)"]}%'
-                  ' OFF</span>'
-              )
-            else:
-              badge_html += (
-                  f'<span class="badge-discount">{row["Desconto (%)"]}% OFF</span>'
-              )
-
-            badge_html += (
-                f'<span class="badge-type">🏠 {row["Tipo de Bem"]}</span>'
-            )
+            badge_html = f'<span class="badge-type">🏠 {row["Tipo de Bem"]}</span>'
 
             msg_wsp = (
                 f"Olá {investidor_sel}! Selecionei uma oportunidade excelente"
                 f" para você:\n\n"
                 f"🏠 *{row['Título do Imóvel']}*\n"
                 f"📍 Cidade: {row['Cidade Imóvel']} - {row['Estado Imóvel']}\n"
-                f"🔥 Desconto: *{row['Desconto (%)']}% OFF*\n"
                 f"💰 Lance Estimado: R$ {row['Preço do Leilão (R$)']:,.2f}\n"
                 f"🏷️ Custo Total Aprox.: R$ {row['Custo Total Estimado (R$)']:,.2f}\n"
                 f"📈 *Lucro Líquido Estimado: R$ {row['Lucro Líquido Real (R$)']:,.2f}*\n\n"
