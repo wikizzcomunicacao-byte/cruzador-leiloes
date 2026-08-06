@@ -346,14 +346,13 @@ else:
 
       pdf.set_font("Arial", "B", 10)
       pdf.set_text_color(0, 82, 204)
-      desconto = str(row["Desconto (%)"])
       tipo = clean_ascii(str(row["Tipo de Bem"]))
       titulo = clean_ascii(str(row["Título do Imóvel"]))
 
       pdf.cell(
           0,
           7,
-          clean_ascii(f"[{desconto}% OFF] [{tipo}] {titulo[:65]}"),
+          clean_ascii(f"[{tipo}] {titulo[:75]}"),
           "LTR",
           1,
           "L",
