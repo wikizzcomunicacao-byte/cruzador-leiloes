@@ -190,6 +190,7 @@ else:
       unsafe_allow_html=True,
   )
 
+
   # -------------------------------------------------------
   # FUNÇÕES AUXILIARES, TRATAMENTO E EXPORTAÇÃO
   # -------------------------------------------------------
@@ -246,6 +247,7 @@ else:
       text = text.replace(k, v)
     return text.encode("latin-1", "replace").decode("latin-1")
 
+
   def normalize(text):
     if not isinstance(text, str):
       return ""
@@ -258,6 +260,7 @@ else:
     text = re.sub(r"[ç]", "c", text)
     text = re.sub(r"[^a-z0-9\s]", " ", text)
     return " ".join(text.split())
+
 
   def parse_budget(budget_str):
     budget_str = str(budget_str)
@@ -274,6 +277,7 @@ else:
     else:
       return 0, 999999999
 
+
   def parse_types(tipos_str):
     norm_t = normalize(tipos_str)
     res = set()
@@ -289,27 +293,27 @@ else:
       res.update(["Area Rural", "Comercial", "Indefinido", "Vaga de Garagem"])
     return list(res)
 
+
   class InformativoLeiloesPDF(FPDF):
 
     def header(self):
-      # Cabeçalho padrão em todas as páginas exceto a capa
       if self.page_no() > 1:
-        self.set_font("Arial", "B", 9)
+        self.set_font("Arial", "B", 8)
         self.set_text_color(100, 116, 139)
         self.cell(
             0,
-            6,
+            5,
             clean_ascii("LOURENCO COLOMBO E ROZANI - ADVOCACIA E LEILOES"),
             0,
             1,
             "L",
         )
         self.set_draw_color(226, 232, 240)
-        self.line(10, 15, 200, 15)
-        self.ln(5)
+        self.line(10, 12, 200, 12)
+        self.ln(3)
 
     def footer(self):
-      self.set_y(-15)
+      self.set_y(-12)
       self.set_font("Arial", "I", 8)
       self.set_text_color(128, 128, 128)
       self.cell(
@@ -323,52 +327,40 @@ else:
           "C",
       )
 
+
   def gerar_pdf_informativo(nome_investidor, df_inv):
     pdf = InformativoLeiloesPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
 
-    # --- PÁGINA 1: CAPA ---
+    # --- PÁGINA 1: CAPA INSTITUCIONAL ---
     pdf.add_page()
-    pdf.ln(10)
-    pdf.set_font("Arial", "B", 20)
+    pdf.ln(15)
+
+    pdf.set_font("Arial", "B", 22)
     pdf.set_text_color(30, 41, 59)
-    pdf.cell(0, 10, clean_ascii("INFORMATIVO DE IMOVEIS"), 0, 1, "C")
-    pdf.cell(0, 10, clean_ascii("EM LEILAO"), 0, 1, "C")
-    pdf.ln(10)
+    pdf.cell(0, 10, clean_ascii("INFORMATIVO DE IMÓVEIS"), 0, 1, "C")
+    pdf.cell(0, 10, clean_ascii("EM LEILÃO"), 0, 1, "C")
+    pdf.ln(8)
 
-    pdf.set_font("Arial", "B", 12)
-    pdf.set_text_color(0, 82, 204)
-    pdf.cell(
-        0,
-        8,
-        clean_ascii(f"LOURENCO COLOMBO E ROZANI"),
-        0,
-        1,
-        "C",
-    )
-    pdf.set_font("Arial", "", 9)
-    pdf.set_text_color(100, 116, 139)
-    pdf.cell(
-        0,
-        5,
-        clean_ascii("ADVOCACIA E LEILOES IMOBILIARIOS"),
-        0,
-        1,
-        "C",
-    )
-    pdf.ln(20)
+    pdf.set_font("Arial", "B", 11)
+    pdf.set_text_color(70, 80, 95)
+    pdf.cell(0, 6, clean_ascii("LOURENÇO COLOMBO E ROZANI"), 0, 1, "C")
+    pdf.set_font("Arial", "", 8.5)
+    pdf.cell(0, 5, clean_ascii("ADVOCACIA E LEILÕES IMOBILIÁRIOS"), 0, 1, "C")
+    pdf.ln(15)
 
-    pdf.set_font("Arial", "", 11)
+    pdf.set_font("Arial", "", 10.5)
     pdf.set_text_color(51, 65, 85)
     pdf.multi_cell(
         0,
         6,
         clean_ascii(
             f"Prezado(a) Investidor(a) {nome_investidor}.\n\n"
-            "E com prazer que apresentamos nosso informativo de imoveis "
-            "disponiveis em leilao. Esta e uma oportunidade unica para adquirir "
-            "bens com precos atrativos e grande potencial de valorizacao!\n\n"
-            "Confira adiante as propriedades em destaque, selecionadas de "
-            "acordo com as regioes e perfis solicitados por voce."
+            "É com prazer que apresentamos nosso informativo de imóveis "
+            "disponíveis em leilão. Esta é uma oportunidade única para adquirir "
+            "bens com preços atrativos e grande potencial de valorização!\n\n"
+            "Confira adiante algumas das propriedades em destaque, de "
+            "acordo com as regiões selecionadas por você."
         ),
     )
     pdf.ln(15)
@@ -384,141 +376,182 @@ else:
 
     pdf.set_fill_color(248, 250, 252)
     pdf.set_draw_color(226, 232, 240)
-    pdf.rect(10, 150, 190, 30, style="DF")
-    pdf.set_xy(15, 155)
-    pdf.set_font("Arial", "B", 10)
-    pdf.cell(0, 6, clean_ascii("PARAMETROS DO INVESTIDOR:"), 0, 1)
-    pdf.set_x(15)
+    pdf.rect(15, 145, 180, 28, style="DF")
+    pdf.set_xy(20, 150)
+    pdf.set_font("Arial", "B", 9.5)
+    pdf.cell(0, 5, clean_ascii("PARÂMETROS DO INVESTIDOR:"), 0, 1)
+    pdf.set_x(20)
     pdf.set_font("Arial", "", 9)
     pdf.cell(
-        0, 6, clean_ascii(f"Regioes Selecionadas: {cid_req}"), 0, 1
+        0, 5, clean_ascii(f"Regiões Selecionadas: {cid_req}"), 0, 1
     )
-    pdf.set_x(15)
+    pdf.set_x(20)
     pdf.cell(
-        0, 6, clean_ascii(f"Faixa de Orcamento: {faixa_req}"), 0, 1
+        0, 5, clean_ascii(f"Faixa de Orçamento: {faixa_req}"), 0, 1
     )
 
-    # --- PÁGINAS DE ITENS ---
+    # --- PÁGINAS DE ITENS (ESTRUTURA EM BLOCOS IDÊNTICA AO ORIGINAL) ---
     if df_inv.empty:
       pdf.add_page()
-      pdf.set_font("Arial", "B", 12)
+      pdf.set_font("Arial", "B", 11)
       pdf.set_text_color(200, 0, 0)
       pdf.cell(
           0,
           10,
           clean_ascii(
-              "NAO EXISTEM OPORTUNIDADES VIAVEIS NAS REGIOES SELECIONADAS"
+              "NÃO EXISTEM OPORTUNIDADES VIÁVEIS NAS REGIÕES SELECIONADAS"
           ),
           0,
           1,
           "C",
       )
     else:
-      # Agrupar por tipo de bem para organizar por seções
       tipos_unicos = df_inv["Tipo de Bem"].unique()
 
       for tipo in tipos_unicos:
         pdf.add_page()
-        pdf.set_font("Arial", "B", 14)
-        pdf.set_text_color(0, 82, 204)
-        pdf.cell(
-            0,
-            10,
-            clean_ascii(f"SECAO: {str(tipo).upper()}"),
-            0,
-            1,
-            "L",
-        )
-        pdf.set_draw_color(0, 82, 204)
+        pdf.set_font("Arial", "B", 13)
+        pdf.set_text_color(30, 41, 59)
+        pdf.cell(0, 8, clean_ascii(str(tipo).upper()), 0, 1, "L")
+        pdf.set_draw_color(100, 116, 139)
         pdf.line(10, pdf.get_y(), 200, pdf.get_y())
-        pdf.ln(5)
+        pdf.ln(4)
 
         df_tipo = df_inv[df_inv["Tipo de Bem"] == tipo]
 
-        for idx, row in df_tipo.iterrows():
-          # Verifica espaço na página para o bloco do imóvel
-          if pdf.get_y() > 230:
+        for idx, (_, row) in enumerate(df_tipo.iterrows(), start=1):
+          if pdf.get_y() > 235:
             pdf.add_page()
 
-          pdf.set_fill_color(250, 252, 255)
-          pdf.set_draw_color(226, 232, 240)
-
-          # Caixa do imóvel
           y_inicial = pdf.get_y()
-          pdf.rect(10, y_inicial, 190, 52, style="DF")
+
+          pdf.set_fill_color(252, 253, 255)
+          pdf.set_draw_color(210, 215, 225)
+          pdf.rect(10, y_inicial, 190, 48, style="DF")
 
           pdf.set_xy(12, y_inicial + 2)
-          pdf.set_font("Arial", "B", 10)
-          pdf.set_text_color(30, 41, 59)
-          titulo_imovel = clean_ascii(str(row["Título do Imóvel"]))
-          pdf.cell(
-              186,
-              6,
-              clean_ascii(f"{titulo_imovel[:85]}"),
-              0,
-              1,
-          )
-
-          pdf.set_x(12)
-          pdf.set_font("Arial", "", 8.5)
-          pdf.set_text_color(70, 80, 95)
-
-          cidade = clean_ascii(str(row["Cidade Imóvel"]))
-          estado = clean_ascii(str(row["Estado Imóvel"]))
-          preco_leilao = f"R$ {row['Preço do Leilão (R$)']:,.2f}"
-          val_avalia = f"R$ {row['Valor de Avaliação (R$)']:,.2f}"
-          lucro_liq = f"R$ {row['Lucro Líquido Real (R$)']:,.2f}"
-          custo_tot = f"R$ {row['Custo Total Estimado (R$)']:,.2f}"
-          endereco = clean_ascii(str(row["Endereço"]))
-          link_anuncio = clean_ascii(str(row["Link do Imóvel"]))
-
-          pdf.cell(
-              186,
-              5,
-              clean_ascii(
-                  f"Localidade: {cidade} - {estado} | Modalidade: Leilao"
-                  " Judicial/Extrajudicial"
-              ),
-              0,
-              1,
-          )
-          pdf.set_x(12)
-          pdf.cell(
-              186,
-              5,
-              clean_ascii(
-                  f"Lance Minimo (Preco): {preco_leilao} | Valor de Avaliacao:"
-                  f" {val_avalia}"
-              ),
-              0,
-              1,
-          )
-          pdf.set_x(12)
-          pdf.cell(
-              186,
-              5,
-              clean_ascii(
-                  f"Custo Total Estimado: {custo_tot} | Lucro Liquido Real:"
-                  f" {lucro_liq}"
-              ),
-              0,
-              1,
-          )
-          pdf.set_x(12)
-          pdf.cell(
-              186,
-              5,
-              clean_ascii(f"Endereco: {endereco[:95]}"),
-              0,
-              1,
-          )
-          pdf.set_x(12)
-          pdf.set_font("Arial", "U", 8)
+          pdf.set_font("Arial", "B", 9.5)
           pdf.set_text_color(0, 82, 204)
+          titulo_num = f"{idx:02d}. {str(row['Título do Imóvel']).upper()}"
+          pdf.cell(186, 5, clean_ascii(titulo_num[:85]), 0, 1)
+
+          pdf.set_font("Arial", "", 8)
+          pdf.set_text_color(50, 60, 75)
+
+          col1_x = 14
+          col2_x = 75
+          col3_x = 135
+          current_y = pdf.get_y() + 1
+
+          pdf.set_xy(col1_x, current_y)
           pdf.cell(
-              186,
-              5,
-              clean_ascii(f"Link do Anuncio Oficial: {link_anuncio}"),
+              60, 4, clean_ascii(f"Matrícula: {row.get('Matrícula', 'N/I')}"), 0, 0
+          )
+          pdf.set_xy(col2_x, current_y)
+          pdf.cell(
+              60,
+              4,
+              clean_ascii(
+                  f"Valor Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f}"
+              ),
+              0,
+              0,
+          )
+          pdf.set_xy(col3_x, current_y)
+          pdf.cell(
+              60,
+              4,
+              clean_ascii(
+                  f"Instituição: {row.get('Instituição', 'Judicial/Caixa')}"
+              ),
+              0,
+              1,
+          )
+
+          current_y += 4.5
+          pdf.set_xy(col1_x, current_y)
+          pdf.cell(
+              60,
+              4,
+              clean_ascii(
+                  f"Área do Terreno: {row.get('Área do Terreno', 'N/I')} m²"
+              ),
+              0,
+              0,
+          )
+          pdf.set_xy(col2_x, current_y)
+          pdf.cell(
+              60,
+              4,
+              clean_ascii(
+                  f"Lance Mínimo: R$ {row['Preço do Leilão (R$)']:,.2f}"
+              ),
+              0,
+              0,
+          )
+          pdf.set_xy(col3_x, current_y)
+          pdf.cell(
+              60,
+              4,
+              clean_ascii(
+                  f"Modalidade: {row.get('Modalidade', 'Leilão')}"
+              ),
+              0,
+              1,
+          )
+
+          current_y += 4.5
+          pdf.set_xy(col1_x, current_y)
+          pdf.cell(
+              60,
+              4,
+              clean_ascii(
+                  f"Custo Total: R$ {row['Custo Total Estimado (R$)']:,.2f}"
+              ),
+              0,
+              0,
+          )
+          pdf.set_xy(col2_x, current_y)
+          pdf.set_font("Arial", "B", 8)
+          pdf.set_text_color(30, 130, 50)
+          pdf.cell(
+              60,
+              4,
+              clean_ascii(
+                  f"Lucro Líquido: R$ {row['Lucro Líquido Real (R$)']:,.2f}"
+              ),
+              0,
+              0,
+          )
+          pdf.set_font("Arial", "", 8)
+          pdf.set_text_color(50, 60, 75)
+          pdf.set_xy(col3_x, current_y)
+          pdf.cell(
+              60,
+              4,
+              clean_ascii(
+                  f"Pagamento: {row.get('Condições de Pagamento', 'À vista')}"
+              ),
+              0,
+              1,
+          )
+
+          current_y += 5
+          pdf.set_xy(col1_x, current_y)
+          endereco_completo = clean_ascii(
+              f"Endereço: {row['Endereço']} - {row['Cidade Imóvel']}/{row['Estado Imóvel']}"
+          )
+          pdf.cell(180, 4, endereco_completo[:105], 0, 1)
+
+          current_y += 4.5
+          pdf.set_xy(col1_x, current_y)
+          pdf.set_font("Arial", "U", 7.5)
+          pdf.set_text_color(0, 82, 204)
+          link_anuncio = str(row["Link do Imóvel"])
+          pdf.cell(
+              180,
+              4,
+              clean_ascii(f"Acesse o Link: {link_anuncio}"),
               0,
               1,
               link=(
@@ -532,6 +565,7 @@ else:
     if isinstance(out, str):
       return out.encode("latin-1")
     return bytes(out)
+
 
   def gerar_excel_profissional(df_input):
     output = io.BytesIO()
@@ -622,6 +656,7 @@ else:
         ws.column_dimensions[col_letter].width = col_widths.get(col_name, 20)
 
     return output.getvalue()
+
 
   # -------------------------------------------------------
   # CABEÇALHO PRINCIPAL
@@ -882,7 +917,7 @@ else:
             if not df_base.empty
             else 5000000.0
         )
-        limite_slider = max(max_p, 1000000000.0)
+        limite_slider = max(max_p, 100000000.0)
         faixa_preco = st.slider(
             "Faixa de Preço do Leilão (R$)",
             min_value=0.0,
