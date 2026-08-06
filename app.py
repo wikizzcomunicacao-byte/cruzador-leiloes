@@ -529,7 +529,7 @@ else:
             ### 📖 Passo a Passo Simples
             1. **Carregue as planilhas** abaixo.
             2. Clique em **🚀 Processar Oportunidades**.
-            3. Refine por **Preço, Desconto Mínimo ou Tipo**.
+            3. Refine por **Preço ou Tipo**.
             4. Navegue pelas **abas do dashboard**.
             """)
 
@@ -771,33 +771,25 @@ else:
     df_base = st.session_state["df_final"]
 
     with st.expander("🔍 **Filtros Avançados de Refinamento**", expanded=True):
-      f_col1, f_col2, f_col3, f_col4 = st.columns([1.2, 1.8, 1.5, 1.5])
+      f_col1, f_col2, f_col3 = st.columns([2, 2, 2])
 
       with f_col1:
-        desconto_min = st.slider(
-            "Desconto Mínimo (%)",
-            min_value=0,
-            max_value=80,
-            value=0,
-            step=5,
-        )
-
-      with f_col2:
         max_p = (
             float(df_base["Preço do Leilão (R$)"].max())
             if not df_base.empty
             else 5000000.0
         )
+        limite_slider = max(max_p, 1000000000.0)
         faixa_preco = st.slider(
             "Faixa de Preço do Leilão (R$)",
             min_value=0.0,
-            max_value=min(max_p, 10000000.0),
-            value=(0.0, min(max_p, 10000000.0)),
+            max_value=limite_slider,
+            value=(0.0, limite_slider),
             step=50000.0,
             format="R$ %,.0f",
         )
 
-      with f_col3:
+      with f_col2:
         tipos_disponiveis = sorted(df_base["Tipo de Bem"].unique().tolist())
         tipos_selecionados = st.multiselect(
             "Tipo de Bem",
@@ -805,7 +797,7 @@ else:
             default=tipos_disponiveis,
         )
 
-      with f_col4:
+      with f_col3:
         busca_texto = st.text_input(
             "Buscar Palavra-chave",
             value="",
@@ -813,8 +805,7 @@ else:
         )
 
     df_filtered = df_base[
-        (df_base["Desconto (%)"] >= desconto_min)
-        & (df_base["Preço do Leilão (R$)"] >= faixa_preco[0])
+        (df_base["Preço do Leilão (R$)"] >= faixa_preco[0])
         & (df_base["Preço do Leilão (R$)"] <= faixa_preco[1])
         & (df_base["Tipo de Bem"].isin(tipos_selecionados))
     ]
@@ -829,7 +820,6 @@ else:
           | df_filtered["Título do Imóvel"].apply(normalize).str.contains(termo)
       ]
 
-    # Aba extra para gerenciar imóveis selecionados/escolhidos
     num_sel = (
         len(st.session_state["imoveis_selecionados"])
         if "imoveis_selecionados" in st.session_state
@@ -842,7 +832,6 @@ else:
             "📋 Tabela & Seleção",
             f"⭐ Selecionados ({num_sel})",
             "👤 Cards por Investidor",
-            "⚔️ Comparativo",
         ]
         if is_tester
         else [
@@ -850,11 +839,10 @@ else:
             "📋 Tabela, Seleção & Download",
             f"⭐ Selecionados ({num_sel})",
             "👤 Cards por Investidor (PDF / WhatsApp)",
-            "⚔️ Comparativo",
         ]
     )
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(tab_labels)
+    tab1, tab2, tab3, tab4 = st.tabs(tab_labels)
 
     with tab1:
       st.write(" ")
@@ -944,11 +932,9 @@ else:
           else:
             st.info("🔒 Download em Excel restrito no modo de teste.")
 
-        # Adiciona coluna de seleção interativa na tabela
         df_display = df_filtered.copy()
         df_display.insert(0, "Selecionar", False)
 
-        # Atualiza o estado dos imóveis já selecionados
         if "imoveis_selecionados" in st.session_state:
           titulos_sel = [
               item["Título do Imóvel"]
@@ -985,12 +971,9 @@ else:
                     "Desconto (%)", format="%.1f%%", min_value=0, max_value=100
                 ),
             },
-            disabled=[
-                c for c in df_display.columns if c != "Selecionar"
-            ],  # Só permite editar a caixa de seleção
+            disabled=[c for c in df_display.columns if c != "Selecionar"],
         )
 
-        # Salva na sessão os imóveis marcados
         selecionados_atual = edited_df[edited_df["Selecionar"] == True]
         st.session_state["imoveis_selecionados"] = (
             selecionados_atual.drop(columns=["Selecionar"])
@@ -1016,7 +999,6 @@ else:
       ):
         df_sel = pd.DataFrame(st.session_state["imoveis_selecionados"])
 
-        # Botão para limpar seleções
         if st.button("🗑️ Limpar Todos os Selecionados"):
           st.session_state["imoveis_selecionados"] = []
           st.rerun()
@@ -1178,71 +1160,6 @@ else:
                 """,
                 unsafe_allow_html=True,
             )
-
-    with tab5:
-      st.write(" ")
-      st.subheader("⚔️ Comparativo Direto entre Investidores")
-      st.caption("Compare critérios e oportunidades encontradas lado a lado.")
-
-      if not df_filtered.empty:
-        all_invs = sorted(df_filtered["Nome do Investidor"].unique().tolist())
-
-        comp_col1, comp_col2 = st.columns(2)
-        with comp_col1:
-          inv1 = st.selectbox(
-              "Selecione o Investidor A:", options=all_invs, index=0
-          )
-        with comp_col2:
-          idx2 = 1 if len(all_invs) > 1 else 0
-          inv2 = st.selectbox(
-              "Selecione o Investidor B:", options=all_invs, index=idx2
-          )
-
-        df1 = df_filtered[df_filtered["Nome do Investidor"] == inv1]
-        df2 = df_filtered[df_filtered["Nome do Investidor"] == inv2]
-
-        st.markdown("---")
-        res_col1, res_col2 = st.columns(2)
-
-        with res_col1:
-          st.markdown(f"### 👤 {inv1}")
-          st.metric("🏢 Total Imóveis", f"{len(df1)}")
-          st.metric(
-              "🔥 Maior Desconto",
-              f"{df1['Desconto (%)'].max():.1f}%" if not df1.empty else "0%",
-          )
-          st.metric(
-              "💰 Lucro Líquido Real Total",
-              f"R$ {df1['Lucro Líquido Real (R$)'].sum():,.0f}"
-              if not df1.empty
-              else "R$ 0",
-          )
-          st.metric(
-              "🏷️ Ticket Médio Lance",
-              f"R$ {df1['Preço do Leilão (R$)'].mean():,.2f}"
-              if not df1.empty
-              else "R$ 0",
-          )
-
-        with res_col2:
-          st.markdown(f"### 👤 {inv2}")
-          st.metric("🏢 Total Imóveis", f"{len(df2)}")
-          st.metric(
-              "🔥 Maior Desconto",
-              f"{df2['Desconto (%)'].max():.1f}%" if not df2.empty else "0%",
-          )
-          st.metric(
-              "💰 Lucro Líquido Real Total",
-              f"R$ {df2['Lucro Líquido Real (R$)'].sum():,.0f}"
-              if not df2.empty
-              else "R$ 0",
-          )
-          st.metric(
-              "🏷️ Ticket Médio Lance",
-              f"R$ {df2['Preço do Leilão (R$)'].mean():,.2f}"
-              if not df2.empty
-              else "R$ 0",
-          )
 
   elif "df_final" not in st.session_state:
     st.info(
