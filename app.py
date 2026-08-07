@@ -1278,7 +1278,7 @@ else:
         )
 
         @st.fragment
-        def renderizar_vitrine(df_cards):
+        def renderizar_vitrine_v4(df_cards):
           cols_cards = st.columns(2)
           for idx, (_, row) in enumerate(df_cards.iterrows()):
             col_target = cols_cards[idx % 2]
@@ -1354,37 +1354,30 @@ else:
                   unsafe_allow_html=True,
               )
 
-              # --- EXTRAÇÃO ROBUSTA: BUSCA APENAS BAIRRO E CIDADE ---
+              # --- PESQUISA DIRECIONADA EM PORTAIS (VIVA REAL, ZAP, OLX, QUINTOANDAR) ---
               endereco_completo = str(row["Endereço"])
               cidade_imovel = str(row["Cidade Imóvel"])
               
               partes_end = [p.strip() for p in endereco_completo.split(",")]
-              bairro_encontrado = ""
+              bairro_limpo = ""
               
-              # Varre as partes do endereço procurando por indicativos reais de bairros
               for parte in partes_end:
                 p_lower = parte.lower()
-                if any(termo_chave in p_lower for termo_chave in ["jardim", "vila", "bairro", "parque", "centro", "zona", "loteamento", "conjunto", "cidade"]):
-                  # Evita pegar a própria cidade como bairro caso ela venha repetida no meio
-                  if cidade_imovel.lower() not in p_lower:
-                    bairro_encontrado = parte
+                if any(termo in p_lower for termo in ["vila", "jardim", "bairro", "parque", "centro", "loteamento", "conjunto", "residencial", "condominio", "zona"]):
+                  if cidade_imovel.lower() not in p_lower and not any(rua_termo in p_lower for rua_termo in ["rua", "av", "avenida", "estrada", "rodovia", "alameda"]):
+                    bairro_limpo = parte
                     break
               
-              # Fallback seguro caso não ache pelas palavras-chave exatas: pega a antepenúltima parte se houver
-              if not bairro_encontrado and len(partes_end) >= 3:
+              if not bairro_limpo and len(partes_end) >= 3:
                 candidato = partes_end[-3]
-                if cidade_imovel.lower() not in candidato.lower():
-                  bairro_encontrado = candidato
-              elif not bairro_encontrado and len(partes_end) == 2:
-                candidato = partes_end[0]
-                if cidade_imovel.lower() not in candidato.lower():
-                  bairro_encontrado = candidato
+                if cidade_imovel.lower() not in candidato.lower() and not any(rua_termo in candidato.lower() for rua_termo in ["rua", "av", "avenida", "estrada"]):
+                  bairro_limpo = candidato
 
-              # Garante que o termo final use estritamente Bairro + Cidade (sem rua, sem número, sem CEP)
-              if bairro_encontrado:
-                termo_pesquisa = f"media valor {bairro_encontrado}, {cidade_imovel}"
+              # Cria um termo de busca focando nos portais imobiliários líderes do mercado brasileiro
+              if bairro_limpo:
+                termo_pesquisa = f"{bairro_limpo} {cidade_imovel} (viva real OR zap imoveis OR quintoandar OR olx)"
               else:
-                termo_pesquisa = f"media valor {cidade_imovel}"
+                termo_pesquisa = f"imoveis {cidade_imovel} (viva real OR zap imoveis OR quintoandar OR olx)"
               
               url_google_pesquisa = f"https://www.google.com/search?q={quote(termo_pesquisa)}"
               
@@ -1392,8 +1385,8 @@ else:
                   f"""
                   <div style="margin-top: -10px; margin-bottom: 10px;">
                       <a href="{url_google_pesquisa}" target="_blank" style="text-decoration: none;">
-                          <div style="background-color: #475569; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                              📊 Consultar Média de Mercado no Google (Bairro/Região)
+                          <div style="background-color: #2563EB; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                              🏢 Consultar Portais (Viva Real, Zap, QuintoAndar, OLX)
                           </div>
                       </a>
                   </div>
@@ -1455,7 +1448,7 @@ else:
               
               st.write("---")
 
-        renderizar_vitrine(df_paginado)
+        renderizar_vitrine_v4(df_paginado)
 
   elif "df_final" not in st.session_state:
     st.info(
