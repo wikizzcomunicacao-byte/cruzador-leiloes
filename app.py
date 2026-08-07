@@ -1354,25 +1354,30 @@ else:
                   unsafe_allow_html=True,
               )
 
-              # --- FILTRAGEM INTELIGENTE DE BAIRRO E CIDADE (SEM CONFLITO DE VARIÁVEIS) ---
+              # --- EXTRAÇÃO RIGOROSA: APENAS BAIRRO E CIDADE (EXCLUINDO RUA) ---
               endereco_completo = str(row["Endereço"])
               cidade_imovel = str(row["Cidade Imóvel"])
               
               partes_end = [p.strip() for p in endereco_completo.split(",")]
               bairro_encontrado = ""
               
+              # Procura especificamente por partes que contenham indicadores de bairro
               for parte in partes_end:
                 if any(termo_chave in parte.lower() for termo_chave in ["jardim", "vila", "bairro", "parque", "centro", "zona", "loteamento"]):
                   bairro_encontrado = parte
                   break
               
+              # Se não achar por palavra-chave, pega o penúltimo elemento se houver estrutura suficiente
               if not bairro_encontrado and len(partes_end) >= 3:
                 bairro_encontrado = partes_end[-3]
               elif not bairro_encontrado and len(partes_end) == 2:
                 bairro_encontrado = partes_end[0]
 
-              termo_pesquisa = f"media valor {bairro_encontrado}, {cidade_imovel}" if bairro_encontrado else f"media valor {cidade_imovel}"
-              termo_pesquisa = re.sub(r',\s*([^,]+),\s*\1', r', \1', termo_pesquisa)
+              # Monta o termo de pesquisa estritamente com Bairro e Cidade (sem rua)
+              if bairro_encontrado and bairro_encontrado.lower() != cidade_imovel.lower():
+                termo_pesquisa = f"media valor {bairro_encontrado}, {cidade_imovel}"
+              else:
+                termo_pesquisa = f"media valor {cidade_imovel}"
               
               url_google_pesquisa = f"https://www.google.com/search?q={quote(termo_pesquisa)}"
               
