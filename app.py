@@ -3,7 +3,6 @@ import io
 import re
 from urllib.parse import quote
 from fpdf import FPDF
-from google import genai
 import numpy as np
 import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill
@@ -13,7 +12,7 @@ import plotly.express as px
 import streamlit as st
 
 # ---------------------------------------------------------
-# CONFIGURAÇÃO DA PÁGINA
+# 1. CONFIGURAÇÃO DA PÁGINA
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="Cruzador de Leilões Enterprise",
@@ -23,16 +22,7 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# CONFIGURAÇÃO DO CLIENTE GEMINI (SECRETS SEGURO)
-# ---------------------------------------------------------
-try:
-  client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
-except Exception:
-  # Fallback caso a secret ainda não esteja configurada no Streamlit
-  client = None
-
-# ---------------------------------------------------------
-# CREDENCIAIS DE ACESSO (ADMIN + TESTE)
+# 2. CREDENCIAIS DE ACESSO (ADMIN + TESTE)
 # ---------------------------------------------------------
 USUARIOS = {
     "administrador": "22029804",
@@ -46,7 +36,7 @@ if "usuario_logado" not in st.session_state:
 
 
 # ---------------------------------------------------------
-# TELA DE LOGIN
+# 3. TELA DE LOGIN
 # ---------------------------------------------------------
 def tela_login():
   st.markdown("<br><br><br>", unsafe_allow_html=True)
@@ -79,7 +69,7 @@ def tela_login():
 
 
 # ---------------------------------------------------------
-# CONTROLE DE FLUXO (LOGIN vs APLICATIVO)
+# 4. CONTROLE DE FLUXO (LOGIN vs APLICATIVO)
 # ---------------------------------------------------------
 if not st.session_state["autenticado"]:
   tela_login()
@@ -104,7 +94,7 @@ else:
       st.rerun()
 
     st.divider()
-    st.markdown("💡 *Dica: Se preferir, use os botões centrais na tela.*")
+    st.markdown("💡 *Dica: Use as abas para navegar entre os recursos.*")
 
   # ESTILIZAÇÃO CSS CUSTOMIZADA
   st.markdown(
@@ -292,30 +282,6 @@ else:
       res.update(["Area Rural", "Comercial", "Indefinido", "Vaga de Garagem"])
     return list(res)
 
-  # FUNÇÃO CACHEADA DE CONSULTA À IA (SENSÍVEL À COTA E RÁPIDA)
-  @st.cache_data(show_spinner=False)
-  def consultar_ia_gemini(
-      tipo_b, titulo_b, end_b, cidade_b, avaliacao_b
-  ):
-    if client is None:
-      return "Erro: A chave GEMINI_API_KEY não está configurada nos Secrets do Streamlit."
-    try:
-      prompt_ia = (
-          f"Aja como um especialista imobiliário sênior. Analise o seguinte imóvel de leilão:\n"
-          f"- Tipo: {tipo_b}\n"
-          f"- Título: {titulo_b}\n"
-          f"- Endereço: {end_b}, {cidade_b}\n"
-          f"- Valor de Avaliação do Leiloeiro: R$ {avaliacao_b:,.2f}\n\n"
-          f"Forneça uma estimativa rápida de mercado, avaliando se o valor de avaliação parece condizente e qual o potencial da região."
-      )
-
-      response = client.models.generate_content(
-          model="gemini-1.5-flash-latest", contents=prompt_ia
-      )
-      return response.text
-    except Exception as e:
-      return f"Erro ao consultar a IA: {e}"
-
   class InformativoLeiloesPDF(FPDF):
 
     def header(self):
@@ -380,7 +346,7 @@ else:
             "disponíveis em leilão. Esta é uma oportunidade única para adquirir "
             "bens com preços atrativos e grande potencial de valorização!\n\n"
             "Confira adiante algumas das propriedades em destaque, de "
-            "acordo com as regiões selecionadas por você."
+            "acordo com las regiões selecionadas por você."
         ),
     )
     pdf.ln(15)
@@ -979,6 +945,7 @@ else:
             "📋 Tabela de Oportunidades",
             f"⭐ Selecionados ({num_sel})",
             "👤 Vitrine / Cards por Investidor",
+            "🧮 Calculadora Financeira",
         ]
         if is_tester
         else [
@@ -986,10 +953,11 @@ else:
             "📋 Tabela de Oportunidades & Download",
             f"⭐ Selecionados ({num_sel})",
             "👤 Vitrine / Cards por Investidor (PDF / WhatsApp)",
+            "🧮 Calculadora Financeira",
         ]
     )
 
-    tab1, tab2, tab3, tab4 = st.tabs(tab_labels)
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(tab_labels)
 
     with tab1:
       st.write(" ")
@@ -1211,6 +1179,7 @@ else:
           investidor_sel = st.selectbox(
               "👤 Selecione o Investidor:",
               options=investidores_lista,
+              key="select_inv_vitrine",
           )
         with c_sel2:
           st.write(" ")
@@ -1260,7 +1229,6 @@ else:
 
         st.write(" ")
 
-        # Paginação de 10 em 10
         itens_por_pagina = 10
         total_imoveis = len(df_inv)
         total_pages = (
@@ -1271,7 +1239,11 @@ else:
 
         if total_pages > 1:
           pagina_atual = st.number_input(
-              "📄 Página de Cards", min_value=1, max_value=total_pages, step=1
+              "📄 Página de Cards",
+              min_value=1,
+              max_value=total_pages,
+              step=1,
+              key="pag_cards",
           )
         else:
           pagina_atual = 1
@@ -1287,7 +1259,7 @@ else:
         )
 
         @st.fragment
-        def renderizar_vitrine_v15(df_cards):
+        def renderizar_vitrine_v17(df_cards):
           cols_cards = st.columns(2)
           for idx, (_, row) in enumerate(df_cards.iterrows()):
             col_target = cols_cards[idx % 2]
@@ -1326,6 +1298,10 @@ else:
             )
             url_wsp = f"https://api.whatsapp.com/send?text={quote(msg_wsp)}"
 
+            # Link de Pesquisa Direta no Google para o imóvel específico
+            termo_busca_google = f"valor de mercado {row['Tipo_de_Bem'] if 'Tipo_de_Bem' in row else row['Tipo de Bem']} {row['Endereço']} {row['Cidade Imóvel']}"
+            url_google_pesquisa = f"https://www.google.com/search?q={quote(termo_busca_google)}"
+
             with col_target:
               link_url = (
                   row["Link do Imóvel"]
@@ -1361,25 +1337,19 @@ else:
                   unsafe_allow_html=True,
               )
 
-              # ANÁLISE DE MERCADO POR IA (DIRETO NA TELA E COM CACHE)
-              with st.expander("🤖 Análise de Mercado por IA (Gemini)"):
-                if st.button(
-                    "✨ Gerar Análise da Região",
-                    key=f"btn_ia_{idx}_{row['Título do Imóvel'][:15]}",
-                ):
-                  with st.spinner("Consultando inteligência de mercado..."):
-                    resultado_analise = consultar_ia_gemini(
-                        row["Tipo de Bem"],
-                        row["Título do Imóvel"],
-                        row["Endereço"],
-                        row["Cidade Imóvel"],
-                        row["Valor de Avaliação (R$)"],
-                    )
-                    if "Erro" in resultado_analise:
-                      st.error(resultado_analise)
-                    else:
-                      st.success("Análise Concluída:")
-                      st.markdown(resultado_analise)
+              # BOTÃO DE PESQUISA DIRETA NO GOOGLE (ABRE APENAS NO CLIQUE)
+              st.markdown(
+                  f"""
+                  <div style="margin-bottom: 10px;">
+                      <a href="{url_google_pesquisa}" target="_blank" style="text-decoration: none;">
+                          <div style="background-color: #4285F4; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                              🔍 Pesquisar no Google sobre o Imóvel/Região
+                          </div>
+                      </a>
+                  </div>
+                  """,
+                  unsafe_allow_html=True,
+              )
 
               # BOTÕES DE AÇÃO
               b_col1, b_col2, b_col3 = st.columns(3)
@@ -1435,7 +1405,83 @@ else:
 
               st.write("---")
 
-        renderizar_vitrine_v15(df_paginado)
+        renderizar_vitrine_v17(df_paginado)
+
+    with tab5:
+      st.write(" ")
+      st.subheader("🧮 Calculadora de Viabilidade Financeira de Leilões")
+      st.markdown(
+          "Simule os custos operacionais e o lucro líquido ajustado para qualquer"
+          " imóvel."
+      )
+
+      calc_col1, calc_col2 = st.columns(2)
+
+      with calc_col1:
+        st.markdown("#### 📥 Parâmetros de Aquisição")
+        val_lance = st.number_input(
+            "Valor do Lance / Arrematação (R$)",
+            min_value=0.0,
+            value=250000.0,
+            step=10000.0,
+            format="R$ %,.2f",
+        )
+        val_mercado = st.number_input(
+            "Valor de Mercado Estimado / Avaliação (R$)",
+            min_value=0.0,
+            value=400000.0,
+            step=10000.0,
+            format="R$ %,.2f",
+        )
+        p_leiloeiro = (
+            st.slider("Comissão do Leiloeiro (%)", 0.0, 10.0, 5.0, 0.5) / 100.0
+        )
+        p_itbi = (
+            st.slider("ITBI e Custos de Cartório / Registro (%)", 0.0, 10.0, 3.0, 0.5)
+            / 100.0
+        )
+        custo_reforma = st.number_input(
+            "Estimativa de Reforma / Limpeza (R$)",
+            min_value=0.0,
+            value=15000.0,
+            step=5000.0,
+            format="R$ %,.2f",
+        )
+
+      with calc_col2:
+        st.markdown("#### 📊 Resultado da Simulação")
+
+        comissao_val = val_lance * p_leiloeiro
+        itbi_val = val_lance * p_itbi
+        custo_total_calc = val_lance + comissao_val + itbi_val + custo_reforma
+        lucro_calc = val_mercado - custo_total_calc
+        roi_calc = (
+            (lucro_calc / custo_total_calc) * 100
+            if custo_total_calc > 0
+            else 0
+        )
+        desconto_calc = (
+            ((val_mercado - val_lance) / val_mercado) * 100
+            if val_mercado > 0
+            else 0
+        )
+
+        st.metric(
+            "💰 Custo Total de Aquisição",
+            f"R$ {custo_total_calc:,.2f}",
+            delta=f"Desconto: {desconto_calc:.1f}%",
+        )
+        st.metric(
+            "📈 Lucro Líquido Estimado",
+            f"R$ {lucro_calc:,.2f}",
+            delta=f"ROI: {roi_calc:.1f}%",
+        )
+
+        st.info(
+            f"• **Comissão do Leiloeiro:** R$ {comissao_val:,.2f}\n\n"
+            f"• **ITBI e Cartório:** R$ {itbi_val:,.2f}\n\n"
+            f"• **Reforma/Outros:** R$ {custo_reforma:,.2f}"
+        )
 
   elif "df_final" not in st.session_state:
     st.info(
