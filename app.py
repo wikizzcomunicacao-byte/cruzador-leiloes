@@ -1340,30 +1340,39 @@ else:
                   unsafe_allow_html=True,
               )
 
-              # PAINEL EXPANSÍVEL DE ANÁLISE DE MERCADO AUTOMATIZADA
+              # PAINEL EXPANSÍVEL DE ANÁLISE DE MERCADO AUTOMATIZADA (POR CIDADE + TIPO DE IMÓVEL)
               with st.expander("🔍 Gerar Análise de Mercado (Automática)"):
                 if st.button(
-                    "✨ Calcular Médias e Valores",
+                    "✨ Calcular Média e Valores da Região",
                     key=f"btn_pesq_{idx}_{row['Título do Imóvel'][:15]}",
                 ):
-                  with st.spinner("Calculando dados da região..."):
-                    # Filtra todos os imóveis da mesma cidade na base carregada para calcular a média, menor e maior valor real
+                  with st.spinner("Analisando mercado do mesmo tipo de imóvel..."):
                     cidade_alvo_imovel = row["Cidade Imóvel"]
-                    df_mesma_cidade = df_filtered[
-                        df_filtered["Cidade Imóvel"] == cidade_alvo_imovel
+                    tipo_alvo_imovel = row["Tipo de Bem"]
+
+                    # Filtra estritamente por mesma cidade e mesmo tipo de bem
+                    df_mesmo_mercado = df_filtered[
+                        (df_filtered["Cidade Imóvel"] == cidade_alvo_imovel)
+                        & (df_filtered["Tipo de Bem"] == tipo_alvo_imovel)
                     ]
 
-                    if not df_mesma_cidade.empty:
-                      val_medio = df_mesma_cidade[
+                    # Se a seleção específica for muito restrita, expande para toda a cidade
+                    if len(df_mesmo_mercado) < 1:
+                      df_mesmo_mercado = df_filtered[
+                          df_filtered["Cidade Imóvel"] == cidade_alvo_imovel
+                      ]
+
+                    if not df_mesmo_mercado.empty:
+                      val_medio = df_mesmo_mercado[
                           "Preço do Leilão (R$)"
                       ].mean()
-                      val_menor = df_mesma_cidade[
+                      val_menor = df_mesmo_mercado[
                           "Preço do Leilão (R$)"
                       ].min()
-                      val_maior = df_mesma_cidade[
+                      val_maior = df_mesmo_mercado[
                           "Preço do Leilão (R$)"
                       ].max()
-                      total_comparaveis = len(df_mesma_cidade)
+                      total_comparaveis = len(df_mesmo_mercado)
                     else:
                       val_medio = row["Preço do Leilão (R$)"]
                       val_menor = row["Preço do Leilão (R$)"]
@@ -1373,12 +1382,12 @@ else:
                     st.markdown(
                         f"""
                                 <p style="font-size: 0.9rem; color: #334155; margin-bottom: 8px;">
-                                    <b>Cidade Analisada:</b> <code>{cidade_alvo_imovel}</code> ({total_comparaveis} imóveis na base)
+                                    <b>Critério:</b> {tipo_alvo_imovel} em <b>{cidade_alvo_imovel}</b> ({total_comparaveis} comparáveis na base)
                                 </p>
                                 <ul style="color: #1E293B; font-size: 0.92rem; line-height: 1.6; padding-left: 20px;">
-                                    <li><b>Média de Valor:</b> R$ {val_medio:,.2f}</li>
-                                    <li><b>Menor Valor Encontrado:</b> R$ {val_menor:,.2f}</li>
-                                    <li><b>Maior Valor Encontrado:</b> R$ {val_maior:,.2f}</li>
+                                    <li><b>Média de Valor na Região:</b> R$ {val_medio:,.2f}</li>
+                                    <li><b>Menor Preço Encontrado:</b> R$ {val_menor:,.2f}</li>
+                                    <li><b>Maior Preço Encontrado:</b> R$ {val_maior:,.2f}</li>
                                 </ul>
                                 """,
                         unsafe_allow_html=True,
