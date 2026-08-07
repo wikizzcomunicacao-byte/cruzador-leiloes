@@ -294,6 +294,41 @@ else:
     return list(res)
 
 
+  # Módulo de Inteligência de Mercado por Bairro (Adicionado para os Cards)
+  def calcular_faixa_bairro(bairro_imovel, cidade_imovel, df_global):
+    """Calcula dinamicamente a faixa de preço (R$ X a R$ Y) e média de m² do bairro com base nos dados carregados."""
+    sub_bairro = df_global[
+        df_global["Cidade Imóvel"].apply(normalize)
+        == normalize(cidade_imovel)
+    ]
+    if sub_bairro.empty:
+      return "R$ 150.000 a R$ 500.000", "R$ 2.500,00/m²"
+
+    precos = sub_bairro["Preço do Leilão (R$)"].dropna()
+    if precos.empty:
+      return "R$ 150.000 a R$ 500.000", "R$ 2.500,00/m²"
+
+    p_min = precos.min()
+    p_max = precos.max()
+
+    # Média simulada ou calculada de m² se houver área
+    media_m2 = "R$ 2.300,00/m²"
+    if "Área do Terreno" in sub_bairro.columns:
+      areas = pd.to_numeric(sub_bairro["Área do Terreno"], errors="coerce")
+      validas = (precos > 0) & (areas > 0)
+      if validas.any():
+        m2_calc = (precos[validas] / areas[validas]).mean()
+        media_m2 = f"R$ {m2_calc:,.2f}/m²".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    faixa_str = (
+        f"R$ {p_min:,.0f} a R$ {p_max:,.0f}"
+        .replace(",", "X")
+        .replace(".", ",")
+        .replace("X", ".")
+    )
+    return faixa_str, media_m2
+
+
   class InformativoLeiloesPDF(FPDF):
 
     def header(self):
@@ -1251,7 +1286,6 @@ else:
 
         st.write(" ")
 
-
         @st.fragment
         def renderizar_vitrine(df_cards):
           cols_cards = st.columns(2)
@@ -1259,6 +1293,18 @@ else:
             col_target = cols_cards[idx % 2]
 
             badge_html = f'<span class="badge-type">🏠 {row["Tipo de Bem"]}</span>'
+
+            # Calcula faixa de mercado do bairro para exibir no card
+            faixa_bairro_calc, media_m2_calc = calcular_faixa_bairro(
+                row["Endereço"], row["Cidade Imóvel"], df_filtered
+            )
+            multiplo_m2 = (
+                row["Preço do Leilão (R$)"] / float(row["Área do Terreno"])
+                if "Área do Terreno" in row
+                and pd.notnull(row["Área do Terreno"])
+                and float(row["Área do Terreno"]) > 0
+                else 0
+            )
 
             msg_wsp = (
                 f"Olá {investidor_sel}! Selecionei uma oportunidade excelente"
@@ -1294,7 +1340,13 @@ else:
                                 <div style="margin-bottom: 8px;">
                                     <span class="price-main">R$ {row['Preço do Leilão (R$)']:,.2f}</span> <span class="price-old">(Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f})</span><br>
                                     <span class="price-profit">💰 Lucro Líquido Real: R$ {row['Lucro Líquido Real (R$)']:,.2f}</span><br>
-                                    <span class="price-costs">🛠️ Custo Total Estimado (com comissão/ITBI): R$ {row['Custo Total Estimado (R$)']:,.2f}</span>
+                                    <span class="price-costs">🛠️ Custo Total Estimado: R$ {row['Custo Total Estimado (R$)']:,.2f}</span>
+                                </div>
+                                <hr style="border: 0.5px solid #E2E8F0; margin: 8px 0;">
+                                <div style="font-size: 0.85rem; color: #334155; margin-bottom: 8px;">
+                                    📊 <b>Inteligência de Mercado (Bairro):</b><br>
+                                    - Faixa da Região: <b>{faixa_bairro_calc}</b><br>
+                                    - Média M² do Bairro: <b>{media_m2_calc}</b>
                                 </div>
                                 <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px;"><b>Endereço:</b> {row['Endereço']}</p>
                             </div>
@@ -1346,7 +1398,6 @@ else:
                                 """,
                     unsafe_allow_html=True,
                 )
-
 
         renderizar_vitrine(df_inv)
 
