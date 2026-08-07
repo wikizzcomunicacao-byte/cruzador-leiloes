@@ -148,7 +148,7 @@ else:
             border: 1px solid #E2E8F0;
             border-radius: 12px;
             padding: 1.2rem;
-            margin-bottom: 0.5rem;
+            margin-bottom: 1rem;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
             position: relative;
@@ -1300,11 +1300,15 @@ else:
                         border: none !important;
                         border-radius: 8px !important;
                         box-shadow: none !important;
-                        font-size: 1.2rem !important;
+                        font-size: 1.1rem !important;
                         padding: 0.4rem 0.6rem !important;
-                        min-height: 40px !important;
+                        min-height: 42px !important;
+                        height: 42px !important;
                         width: 100% !important;
                         line-height: 1 !important;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
                     }
                     div[data-testid="column"] button[kind="secondary"]:hover {
                         background-color: #003D99 !important;
@@ -1314,9 +1318,10 @@ else:
                     unsafe_allow_html=True,
                 )
 
+                # Estrutura interna do card idêntica ao seu modelo
                 st.markdown(
                     f"""
-                    <div class="property-card">
+                    <div class="property-card" style="padding-bottom: 3.5rem;">
                         <h4 style="margin-top: 4px; margin-bottom: 4px; color: #1E293B;">{row['Título do Imóvel']}</h4>
                         <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']}</p>
                         <div style="margin-bottom: 8px;">
@@ -1326,17 +1331,19 @@ else:
                             <span class="price-costs">• ITBI e Cartório: R$ {val_itbi_cartorio:,.2f}</span><br>
                             <span class="price-costs">🛠️ Custo Total Estimado: R$ {row['Custo Total Estimado (R$)']:,.2f}</span>
                         </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
-                            <p style="font-size: 0.85rem; color: #475569; margin-bottom: 0;"><b>Endereço:</b> {row['Endereço']}</p>
-                        </div>
+                        <p style="font-size: 0.85rem; color: #475569; margin-bottom: 0;"><b>Endereço:</b> {row['Endereço']}</p>
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
 
-              # Parte inferior direita: Estrela e Link lado a lado com o mesmo estilo e tamanho
-              r_col1, r_col2 = st.columns([1, 1])
-              with r_col1:
+              # Posicionamento exato dos botões flutuando no canto inferior direito do card
+              st.markdown(
+                  '<div style="margin-top: -62px; padding-right: 18px;">',
+                  unsafe_allow_html=True,
+              )
+              b_col_space, b_col1, b_col2 = st.columns([4, 1, 1])
+              with b_col1:
                 label_estrela = "⭐" if ja_selecionado else "☆"
                 if st.button(
                     label_estrela,
@@ -1359,17 +1366,17 @@ else:
                     )
                   st.rerun()
 
-              with r_col2:
+              with b_col2:
                 st.markdown(
                     f"""
-                    <a href="{link_url}" target="_blank" title="Ver Anúncio Oficial" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: #E0E7FF; color: #3730A3; border-radius: 8px; height: 40px; font-size: 1.2rem; font-weight: bold; width: 100%;">
+                    <a href="{link_url}" target="_blank" title="Ver Anúncio Oficial" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: #E0E7FF; color: #3730A3; border-radius: 8px; height: 42px; font-size: 1.2rem; font-weight: bold; width: 100%;">
                         🔗
                     </a>
                     """,
                     unsafe_allow_html=True,
                 )
-
-              st.write(" ")
+              st.markdown("</div>", unsafe_allow_html=True)
+              st.write("<br>", unsafe_allow_html=True)
 
         renderizar_vitrine_v25(df_paginado)
 
