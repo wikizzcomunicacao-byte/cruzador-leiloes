@@ -300,6 +300,29 @@ else:
     return list(res)
 
 
+  # --- FUNÇÃO CACHEADA PARA CONSULTAR A IA SEM ESTOURAR COTA ---
+  @st.cache_data(show_spinner=False)
+  def consultar_ia_gemini(
+      tipo_b, titulo_b, end_b, cidade_b, avaliacao_b
+  ):
+    try:
+      prompt_ia = (
+          f"Aja como um especialista imobiliário sênior. Analise o seguinte imóvel de leilão:\n"
+          f"- Tipo: {tipo_b}\n"
+          f"- Título: {titulo_b}\n"
+          f"- Endereço: {end_b}, {cidade_b}\n"
+          f"- Valor de Avaliação do Leiloeiro: R$ {avaliacao_b:,.2f}\n\n"
+          f"Forneça uma estimativa rápida de mercado, avaliando se o valor de avaliação parece condizente e qual o potencial da região."
+      )
+
+      response = client.models.generate_content(
+          model="gemini-1.5-flash", contents=prompt_ia
+      )
+      return response.text
+    except Exception as e:
+      return f"Erro ao consultar a IA: {e}"
+
+
   class InformativoLeiloesPDF(FPDF):
 
     def header(self):
@@ -1284,7 +1307,7 @@ else:
         )
 
         @st.fragment
-        def renderizar_vitrine_v13(df_cards):
+        def renderizar_vitrine_v14(df_cards):
           cols_cards = st.columns(2)
           for idx, (_, row) in enumerate(df_cards.iterrows()):
             col_target = cols_cards[idx % 2]
@@ -1360,37 +1383,25 @@ else:
                   unsafe_allow_html=True,
               )
 
-              # --- ANÁLISE AUTOMÁTICA VIA GEMINI API SDK NOVO ---
+              # --- ANÁLISE DE MERCADO DIRETO NA TELA (GEMINI-1.5-FLASH + CACHE) ---
               with st.expander("🤖 Análise de Mercado por IA (Gemini)"):
                 if st.button(
                     "✨ Gerar Análise da Região",
                     key=f"btn_ia_{idx}_{row['Título do Imóvel'][:15]}",
                 ):
                   with st.spinner("Consultando inteligência de mercado..."):
-                    try:
-                      endereco_completo = str(row["Endereço"])
-                      titulo_imovel = str(row["Título do Imóvel"])
-                      cidade_imovel = str(row["Cidade Imóvel"])
-                      tipo_bem = str(row["Tipo de Bem"])
-                      valor_avaliacao = row["Valor de Avaliação (R$)"]
-
-                      prompt_ia = (
-                          f"Aja como um especialista imobiliário sênior. Analise o seguinte imóvel de leilão:\n"
-                          f"- Tipo: {tipo_bem}\n"
-                          f"- Título: {titulo_imovel}\n"
-                          f"- Endereço: {endereco_completo}, {cidade_imovel}\n"
-                          f"- Valor de Avaliação do Leiloeiro: R$ {valor_avaliacao:,.2f}\n\n"
-                          f"Forneça uma estimativa rápida de mercado, avaliando se o valor de avaliação parece condizente e qual o potencial da região."
-                      )
-
-                      response = client.models.generate_content(
-                          model="gemini-1.5-flash",
-                          contents=prompt_ia,
-                      )
+                    resultado_analise = consultar_ia_gemini(
+                        row["Tipo de Bem"],
+                        row["Título do Imóvel"],
+                        row["Endereço"],
+                        row["Cidade Imóvel"],
+                        row["Valor de Avaliação (R$)"],
+                    )
+                    if "Erro" in resultado_analise:
+                      st.error(resultado_analise)
+                    else:
                       st.success("Análise Concluída:")
-                      st.markdown(response.text)
-                    except Exception as e:
-                      st.error(f"Erro ao consultar a IA: {e}")
+                      st.markdown(resultado_analise)
 
               # Botões de Ação (Escolher, Anúncio, WhatsApp)
               b_col1, b_col2, b_col3 = st.columns(3)
@@ -1446,7 +1457,7 @@ else:
               
               st.write("---")
 
-        renderizar_vitrine_v13(df_paginado)
+        renderizar_vitrine_v14(df_paginado)
 
   elif "df_final" not in st.session_state:
     st.info(
