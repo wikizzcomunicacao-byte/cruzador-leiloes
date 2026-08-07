@@ -1259,7 +1259,7 @@ else:
         )
 
         @st.fragment
-        def renderizar_vitrine_v18(df_cards):
+        def renderizar_vitrine_v19(df_cards):
           cols_cards = st.columns(2)
           for idx, (_, row) in enumerate(df_cards.iterrows()):
             col_target = cols_cards[idx % 2]
@@ -1298,6 +1298,10 @@ else:
             )
             url_wsp = f"https://api.whatsapp.com/send?text={quote(msg_wsp)}"
 
+            # Link de Pesquisa Direta no Google para valor de mercado
+            termo_pesquisa_google = f"valor de mercado {row['Endereço']}, {row['Cidade Imóvel']}"
+            url_google_pesquisa = f"https://www.google.com/search?q={quote(termo_pesquisa_google)}"
+
             with col_target:
               link_url = (
                   row["Link do Imóvel"]
@@ -1333,33 +1337,24 @@ else:
                   unsafe_allow_html=True,
               )
 
-              # PAINEL EXPANSÍVEL: PESQUISA DE MERCADO DIRETO NA TELA (SÓ RODA NO CLIQUE)
-              with st.expander("🔍 Ver Média de Valor da Região (Pesquisa Inteligente)"):
-                if st.button(
-                    "✨ Gerar Análise de Mercado",
-                    key=f"btn_pesquisa_{idx}_{row['Título do Imóvel'][:15]}",
-                ):
-                  with st.spinner(
-                      "Cruzando dados de mercado da região..."
-                  ):
-                    # Simulação estruturada com base nos parâmetros do imóvel selecionado
-                    val_medio_est = (
-                        row["Valor de Avaliação (R$)"]
-                        if pd.notnull(row["Valor de Avaliação (R$)"])
-                        and row["Valor de Avaliação (R$)"] > 0
-                        else row["Preço do Leilão (R$)"] * 1.5
-                    )
-                    v_min_regiao = val_medio_est * 0.8
-                    v_max_regiao = val_medio_est * 1.2
-
-                    st.markdown(f"""
-                                **Pesquisa de Mercado Realizada para:** `{row['Endereço']}, {row['Cidade Imóvel']} - {row['Estado Imóvel']}`
-                                
-                                * **Valor Médio de Venda na Localidade:** R$ {val_medio_est:,.2f}
-                                * **Faixa de Preço Estimada por Metro Quadrado / Região:** R$ {v_min_regiao:,.2f} a R$ {v_max_regiao:,.2f}
-                                * **Avaliação do Leiloeiro:** R$ {row['Valor de Avaliação (R$)']:,.2f} (Condizente com o histórico da região).
-                                * **Oportunidade Atual:** Desconto de **{row['Desconto (%)']:.1f}%** em relação ao mercado.
-                                """)
+              # PAINEL DE ANÁLISE DE MERCADO: PESQUISA DIRETA NO GOOGLE
+              with st.expander("🔍 Ver Média de Valor da Região (Google Search)"):
+                st.markdown(
+                    f"""
+                    <p style="font-size: 0.88rem; color: #475569; margin-bottom: 8px;">
+                        Consulte em tempo real a média de valores e preços por metro quadrado direto no <b>Google</b> para este endereço:
+                    </p>
+                    <p style="font-size: 0.82rem; color: #1E293B; background-color: #F8FAFC; padding: 6px; border-radius: 6px; border: 1px solid #E2E8F0; margin-bottom: 10px;">
+                        📍 <i>valor de mercado {row['Endereço']}, {row['Cidade Imóvel']}</i>
+                    </p>
+                    <a href="{url_google_pesquisa}" target="_blank" style="text-decoration: none;">
+                        <div style="background-color: #4285F4; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            🌐 Pesquisar "valor de mercado" no Google
+                        </div>
+                    </a>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
               # BOTÕES DE AÇÃO
               b_col1, b_col2, b_col3 = st.columns(3)
@@ -1415,7 +1410,7 @@ else:
 
               st.write("---")
 
-        renderizar_vitrine_v18(df_paginado)
+        renderizar_vitrine_v19(df_paginado)
 
     with tab5:
       st.write(" ")
