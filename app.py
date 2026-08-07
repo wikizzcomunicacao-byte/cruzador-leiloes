@@ -1275,60 +1275,49 @@ else:
             val_comissao_leiloeiro = preco_card * taxa_leiloeiro
             val_itbi_cartorio = preco_card * taxa_itbi
 
-            msg_wsp = (
-                f"Olá {investidor_sel}! Selecionei uma oportunidade excelente"
-                f" para você:\n\n"
-                f"🏠 *{row['Título do Imóvel']}*\n"
-                f"📍 Cidade: {row['Cidade Imóvel']} - {row['Estado Imóvel']}\n"
-                f"💰 Lance Estimado: R$ {row['Preço do Leilão (R$)']:,.2f}\n"
-                f"🏷️ Custo Total Aprox.: R$ {row['Custo Total Estimado (R$)']:,.2f}\n"
-                f"📈 *Lucro Líquido Estimado: R$ {row['Lucro Líquido Real (R$)']:,.2f}*\n\n"
-                f"🔗 Ver Anúncio: {row['Link do Imóvel']}"
+            link_url = (
+                row["Link do Imóvel"]
+                if str(row["Link do Imóvel"]).startswith("http")
+                else "#"
             )
-            url_wsp = f"https://api.whatsapp.com/send?text={quote(msg_wsp)}"
+
+            ja_selecionado = any(
+                item["Título do Imóvel"] == row["Título do Imóvel"]
+                and item["Nome do Investidor"] == row["Nome do Investidor"]
+                for item in st.session_state["imoveis_selecionados"]
+            )
 
             with col_target:
-              link_url = (
-                  row["Link do Imóvel"]
-                  if str(row["Link do Imóvel"]).startswith("http")
-                  else "#"
-              )
+              # Container principal do card com o botão de favoritar (estrela) no topo direito
+              with st.container():
+                st.markdown(
+                    f"""
+                    <div class="property-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <div>{badge_html}</div>
+                        </div>
+                        <h4 style="margin-top: 4px; margin-bottom: 4px; color: #1E293B;">{row['Título do Imóvel']}</h4>
+                        <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']}</p>
+                        <div style="margin-bottom: 8px;">
+                            <span class="price-main">R$ {row['Preço do Leilão (R$)']:,.2f}</span> <span class="price-old">(Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f})</span><br>
+                            <span class="price-profit">💰 Lucro Líquido Real: R$ {row['Lucro Líquido Real (R$)']:,.2f}</span><br>
+                            <span class="price-costs">• Comissão do Leiloeiro: R$ {val_comissao_leiloeiro:,.2f}</span><br>
+                            <span class="price-costs">• ITBI e Cartório: R$ {val_itbi_cartorio:,.2f}</span><br>
+                            <span class="price-costs">🛠️ Custo Total Estimado: R$ {row['Custo Total Estimado (R$)']:,.2f}</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px;"><b>Endereço:</b> {row['Endereço']}</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
-              ja_selecionado = any(
-                  item["Título do Imóvel"] == row["Título do Imóvel"]
-                  and item["Nome do Investidor"] == row["Nome do Investidor"]
-                  for item in st.session_state["imoveis_selecionados"]
-              )
-
-              st.markdown(
-                  f"""
-                            <div class="property-card">
-                                {badge_html}
-                                <h4 style="margin-top: 8px; margin-bottom: 4px; color: #1E293B;">{row['Título do Imóvel']}</h4>
-                                <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']}</p>
-                                <div style="margin-bottom: 8px;">
-                                    <span class="price-main">R$ {row['Preço do Leilão (R$)']:,.2f}</span> <span class="price-old">(Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f})</span><br>
-                                    <span class="price-profit">💰 Lucro Líquido Real: R$ {row['Lucro Líquido Real (R$)']:,.2f}</span><br>
-                                    <span class="price-costs">• Comissão do Leiloeiro: R$ {val_comissao_leiloeiro:,.2f}</span><br>
-                                    <span class="price-costs">• ITBI e Cartório: R$ {val_itbi_cartorio:,.2f}</span><br>
-                                    <span class="price-costs">🛠️ Custo Total Estimado: R$ {row['Custo Total Estimado (R$)']:,.2f}</span>
-                                </div>
-                                <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px;"><b>Endereço:</b> {row['Endereço']}</p>
-                            </div>
-                            """,
-                  unsafe_allow_html=True,
-              )
-
-              # BOTÕES DE AÇÃO
-              b_col1, b_col2, b_col3 = st.columns(3)
-              with b_col1:
+              # Botões de Estrela (Favoritar) e Link de Anúncio integrados lado a lado
+              sub_col1, sub_col2 = st.columns([1, 2])
+              with sub_col1:
+                label_estrela = "⭐ Favoritado" if ja_selecionado else "☆ Favoritar"
                 if st.button(
-                    (
-                        "⭐ Remover"
-                        if ja_selecionado
-                        else "⭐ Escolher"
-                    ),
-                    key=f"btn_sel_{idx}_{row['Título do Imóvel']}",
+                    label_estrela,
+                    key=f"btn_estrela_{idx}_{row['Título do Imóvel']}",
                     use_container_width=True,
                 ):
                   if ja_selecionado:
@@ -1347,24 +1336,12 @@ else:
                     )
                   st.rerun()
 
-              with b_col2:
+              with sub_col2:
                 st.markdown(
                     f"""
                     <a href="{link_url}" target="_blank" style="text-decoration: none;">
-                        <button style="background-color: #0052CC; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 0.8rem;">
-                            🔗 Anúncio
-                        </button>
-                    </a>
-                    """,
-                    unsafe_allow_html=True,
-                )
-
-              with b_col3:
-                st.markdown(
-                    f"""
-                    <a href="{url_wsp}" target="_blank" style="text-decoration: none;">
-                        <button style="background-color: #25D366; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 0.8rem;">
-                            📲 WhatsApp
+                        <button style="background-color: #0052CC; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 0.9rem;">
+                            🔗 Ver Anúncio Oficial
                         </button>
                     </a>
                     """,
