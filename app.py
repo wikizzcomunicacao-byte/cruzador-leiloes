@@ -148,10 +148,11 @@ else:
             border: 1px solid #E2E8F0;
             border-radius: 12px;
             padding: 1.2rem;
+            padding-bottom: 3.5rem; /* Espaço interno embaixo para os botões absolutos */
             margin-bottom: 1rem;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
-            position: relative;
+            position: relative; /* Essencial para conter os elementos absolutos */
         }
         .property-card:hover {
             transform: translateY(-2px);
@@ -1300,7 +1301,7 @@ else:
                         border: none !important;
                         border-radius: 6px !important;
                         box-shadow: none !important;
-                        font-size: 0.95rem !important;
+                        font-size: 0.9rem !important;
                         padding: 0px !important;
                         min-height: 32px !important;
                         height: 32px !important;
@@ -1318,10 +1319,10 @@ else:
                     unsafe_allow_html=True,
                 )
 
-                # Estrutura do card com espaço reservado na parte inferior direita para os botões menores
+                # Container principal do card e botões posicionados absolutamente no canto inferior direito
                 st.markdown(
                     f"""
-                    <div class="property-card" style="padding-bottom: 2.8rem;">
+                    <div class="property-card">
                         <h4 style="margin-top: 4px; margin-bottom: 4px; color: #1E293B;">{row['Título do Imóvel']}</h4>
                         <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']}</p>
                         <div style="margin-bottom: 8px;">
@@ -1332,17 +1333,16 @@ else:
                             <span class="price-costs">🛠️ Custo Total Estimado: R$ {row['Custo Total Estimado (R$)']:,.2f}</span>
                         </div>
                         <p style="font-size: 0.85rem; color: #475569; margin-bottom: 0;"><b>Endereço:</b> {row['Endereço']}</p>
-                    </div>
                     """,
                     unsafe_allow_html=True,
                 )
 
-              # Posicionamento exato dos botões pequenos alinhados dentro do card no canto inferior direito
+              # Linha interna com position absolute alinhada embaixo e à direita do card
               st.markdown(
-                  '<div style="margin-top: -52px; padding-right: 16px;">',
+                  '<div style="position: absolute; bottom: 12px; right: 15px; width: 90px; display: flex; gap: 6px; z-index: 5;">',
                   unsafe_allow_html=True,
               )
-              b_col_space, b_col1, b_col2 = st.columns([5.2, 0.9, 0.9])
+              b_col1, b_col2 = st.columns(2)
               with b_col1:
                 label_estrela = "⭐" if ja_selecionado else "☆"
                 if st.button(
@@ -1369,14 +1369,14 @@ else:
               with b_col2:
                 st.markdown(
                     f"""
-                    <a href="{link_url}" target="_blank" title="Ver Anúncio Oficial" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: #E0E7FF; color: #3730A3; border-radius: 6px; height: 32px; font-size: 1rem; font-weight: bold; width: 100%;">
+                    <a href="{link_url}" target="_blank" title="Ver Anúncio Oficial" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: #E0E7FF; color: #3730A3; border-radius: 6px; height: 32px; font-size: 0.95rem; font-weight: bold; width: 100%;">
                         🔗
                     </a>
                     """,
                     unsafe_allow_html=True,
                 )
-              st.markdown("</div>", unsafe_allow_html=True)
-              st.write("<br>", unsafe_allow_html=True)
+              st.markdown("</div></div>", unsafe_allow_html=True)
+              st.write(" ")
 
         renderizar_vitrine_v25(df_paginado)
 
