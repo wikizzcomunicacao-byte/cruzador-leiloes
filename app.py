@@ -13,12 +13,7 @@ import plotly.express as px
 import streamlit as st
 
 # ---------------------------------------------------------
-# CONFIGURAÇÃO DO CLIENTE GEMINI COM SUA CHAVE
-# ---------------------------------------------------------
-client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
-
-# ---------------------------------------------------------
-# 1. CONFIGURAÇÃO DA PÁGINA
+# CONFIGURAÇÃO DA PÁGINA
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="Cruzador de Leilões Enterprise",
@@ -28,14 +23,22 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# 2. CREDENCIAIS DE ACESSO (ADMIN + TESTE)
+# CONFIGURAÇÃO DO CLIENTE GEMINI (SECRETS SEGURO)
+# ---------------------------------------------------------
+try:
+  client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
+except Exception:
+  # Fallback caso a secret ainda não esteja configurada no Streamlit
+  client = None
+
+# ---------------------------------------------------------
+# CREDENCIAIS DE ACESSO (ADMIN + TESTE)
 # ---------------------------------------------------------
 USUARIOS = {
     "administrador": "22029804",
-    "teste": "teste123",  # Perfil exclusivo de visualização (sem downloads)
+    "teste": "teste123",
 }
 
-# Inicializa o estado de sessão de login
 if "autenticado" not in st.session_state:
   st.session_state["autenticado"] = False
 if "usuario_logado" not in st.session_state:
@@ -43,7 +46,7 @@ if "usuario_logado" not in st.session_state:
 
 
 # ---------------------------------------------------------
-# 3. TELA DE LOGIN
+# TELA DE LOGIN
 # ---------------------------------------------------------
 def tela_login():
   st.markdown("<br><br><br>", unsafe_allow_html=True)
@@ -76,16 +79,14 @@ def tela_login():
 
 
 # ---------------------------------------------------------
-# 4. CONTROLE DE FLUXO (LOGIN vs APLICATIVO)
+# CONTROLE DE FLUXO (LOGIN vs APLICATIVO)
 # ---------------------------------------------------------
 if not st.session_state["autenticado"]:
   tela_login()
 else:
   is_tester = st.session_state["usuario_logado"] == "teste"
 
-  # -------------------------------------------------------
-  # BARRA LATERAL (OPCIONAL / SUPORTE)
-  # -------------------------------------------------------
+  # BARRA LATERAL
   with st.sidebar:
     st.title("🏢 Cruzador Pro")
     if is_tester:
@@ -105,9 +106,7 @@ else:
     st.divider()
     st.markdown("💡 *Dica: Se preferir, use os botões centrais na tela.*")
 
-  # -------------------------------------------------------
   # ESTILIZAÇÃO CSS CUSTOMIZADA
-  # -------------------------------------------------------
   st.markdown(
       """
         <style>
@@ -196,10 +195,7 @@ else:
       unsafe_allow_html=True,
   )
 
-
-  # -------------------------------------------------------
-  # FUNÇÕES AUXILIARES, TRATAMENTO E EXPORTAÇÃO
-  # -------------------------------------------------------
+  # FUNÇÕES AUXILIARES DE TRATAMENTO
   def clean_ascii(text):
     if not isinstance(text, str):
       text = str(text) if text is not None else ""
@@ -253,7 +249,6 @@ else:
       text = text.replace(k, v)
     return text.encode("latin-1", "replace").decode("latin-1")
 
-
   def normalize(text):
     if not isinstance(text, str):
       return ""
@@ -266,7 +261,6 @@ else:
     text = re.sub(r"[ç]", "c", text)
     text = re.sub(r"[^a-z0-9\s]", " ", text)
     return " ".join(text.split())
-
 
   def parse_budget(budget_str):
     budget_str = str(budget_str)
@@ -283,7 +277,6 @@ else:
     else:
       return 0, 999999999
 
-
   def parse_types(tipos_str):
     norm_t = normalize(tipos_str)
     res = set()
@@ -299,12 +292,13 @@ else:
       res.update(["Area Rural", "Comercial", "Indefinido", "Vaga de Garagem"])
     return list(res)
 
-
-  # --- FUNÇÃO CACHEADA PARA CONSULTAR A IA SEM ESTOURAR COTA ---
+  # FUNÇÃO CACHEADA DE CONSULTA À IA (SENSÍVEL À COTA E RÁPIDA)
   @st.cache_data(show_spinner=False)
   def consultar_ia_gemini(
       tipo_b, titulo_b, end_b, cidade_b, avaliacao_b
   ):
+    if client is None:
+      return "Erro: A chave GEMINI_API_KEY não está configurada nos Secrets do Streamlit."
     try:
       prompt_ia = (
           f"Aja como um especialista imobiliário sênior. Analise o seguinte imóvel de leilão:\n"
@@ -316,12 +310,11 @@ else:
       )
 
       response = client.models.generate_content(
-          model="gemini-1.5-flash", contents=prompt_ia
+          model="gemini-1.5-flash-latest", contents=prompt_ia
       )
       return response.text
     except Exception as e:
       return f"Erro ao consultar a IA: {e}"
-
 
   class InformativoLeiloesPDF(FPDF):
 
@@ -356,12 +349,10 @@ else:
           "C",
       )
 
-
   def gerar_pdf_informativo(nome_investidor, df_inv):
     pdf = InformativoLeiloesPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
 
-    # --- PÁGINA 1: CAPA INSTITUCIONAL ---
     pdf.add_page()
     pdf.ln(15)
 
@@ -419,7 +410,6 @@ else:
         0, 5, clean_ascii(f"Faixa de Orçamento: {faixa_req}"), 0, 1
     )
 
-    # --- PÁGINAS DE ITENS (ESTRUTURA EM BLOCOS IDÊNTICA AO ORIGINAL) ---
     if df_inv.empty:
       pdf.add_page()
       pdf.set_font("Arial", "B", 11)
@@ -595,7 +585,6 @@ else:
       return out.encode("latin-1")
     return bytes(out)
 
-
   def gerar_excel_profissional(df_input):
     output = io.BytesIO()
     df_export = df_input.copy()
@@ -686,10 +675,7 @@ else:
 
     return output.getvalue()
 
-
-  # -------------------------------------------------------
   # CABEÇALHO PRINCIPAL
-  # -------------------------------------------------------
   col_head1, col_head2 = st.columns([4, 1])
   with col_head1:
     st.title("🎯 Cruzador Automático de Leilões")
@@ -711,9 +697,7 @@ else:
 
   st.divider()
 
-  # -------------------------------------------------------
   # CENTRAL DE UPLOAD NA TELA PRINCIPAL
-  # -------------------------------------------------------
   with st.container():
     st.subheader("📂 Central de Envio e Parâmetros")
     up_col1, up_col2, up_col3 = st.columns([1.5, 1.5, 1])
@@ -742,9 +726,7 @@ else:
 
   st.divider()
 
-  # -------------------------------------------------------
-  # LÓGICA DE PROCESSAMENTO E ARMAZENAMENTO EM SESSION
-  # -------------------------------------------------------
+  # PROCESSAMENTO DE DADOS
   if file_leiloes and file_investidores and executar:
     with st.spinner("Analisando critérios e cruzando bases de dados..."):
       try:
@@ -931,9 +913,7 @@ else:
       except Exception as e:
         st.error(f"Erro ao processar as planilhas: {e}")
 
-  # -------------------------------------------------------
   # EXIBIÇÃO DO DASHBOARD E ABAS
-  # -------------------------------------------------------
   if "df_final" in st.session_state and not st.session_state["df_final"].empty:
     df_base = st.session_state["df_final"]
 
@@ -1280,7 +1260,7 @@ else:
 
         st.write(" ")
 
-        # Configuração da Paginação de 10 em 10 cards
+        # Paginação de 10 em 10
         itens_por_pagina = 10
         total_imoveis = len(df_inv)
         total_pages = (
@@ -1307,14 +1287,13 @@ else:
         )
 
         @st.fragment
-        def renderizar_vitrine_v14(df_cards):
+        def renderizar_vitrine_v15(df_cards):
           cols_cards = st.columns(2)
           for idx, (_, row) in enumerate(df_cards.iterrows()):
             col_target = cols_cards[idx % 2]
 
             badge_html = f'<span class="badge-type">🏠 {row["Tipo de Bem"]}</span>'
 
-            # Correção do cálculo da faixa (ignorando valores zerados e nulos da mesma cidade)
             cidade_alvo = row["Cidade Imóvel"]
             sub_cidade = df_filtered[
                 df_filtered["Cidade Imóvel"] == cidade_alvo
@@ -1360,7 +1339,6 @@ else:
                   for item in st.session_state["imoveis_selecionados"]
               )
 
-              # Card unificado com as informações básicas
               st.markdown(
                   f"""
                             <div class="property-card">
@@ -1383,7 +1361,7 @@ else:
                   unsafe_allow_html=True,
               )
 
-              # --- ANÁLISE DE MERCADO DIRETO NA TELA (GEMINI-1.5-FLASH + CACHE) ---
+              # ANÁLISE DE MERCADO POR IA (DIRETO NA TELA E COM CACHE)
               with st.expander("🤖 Análise de Mercado por IA (Gemini)"):
                 if st.button(
                     "✨ Gerar Análise da Região",
@@ -1403,7 +1381,7 @@ else:
                       st.success("Análise Concluída:")
                       st.markdown(resultado_analise)
 
-              # Botões de Ação (Escolher, Anúncio, WhatsApp)
+              # BOTÕES DE AÇÃO
               b_col1, b_col2, b_col3 = st.columns(3)
               with b_col1:
                 if st.button(
@@ -1413,7 +1391,7 @@ else:
                         else "⭐ Escolher"
                     ),
                     key=f"btn_sel_{idx}_{row['Título do Imóvel']}",
-                    use_container_width=True
+                    use_container_width=True,
                 ):
                   if ja_selecionado:
                     st.session_state["imoveis_selecionados"] = [
@@ -1454,10 +1432,10 @@ else:
                     """,
                     unsafe_allow_html=True,
                 )
-              
+
               st.write("---")
 
-        renderizar_vitrine_v14(df_paginado)
+        renderizar_vitrine_v15(df_paginado)
 
   elif "df_final" not in st.session_state:
     st.info(
