@@ -3,6 +3,7 @@ import io
 import re
 from urllib.parse import quote
 from fpdf import FPDF
+from google import genai
 import numpy as np
 import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill
@@ -1278,7 +1279,7 @@ else:
         )
 
         @st.fragment
-        def renderizar_vitrine_v8(df_cards):
+        def renderizar_vitrine_v9(df_cards):
           cols_cards = st.columns(2)
           for idx, (_, row) in enumerate(df_cards.iterrows()):
             col_target = cols_cards[idx % 2]
@@ -1354,7 +1355,7 @@ else:
                   unsafe_allow_html=True,
               )
 
-              # --- EXTRAÇÃO DO BAIRRO E MONTAGEM DA PERGUNTA PARA A IA ---
+              # --- CONSULTA DIRETA À IA (GEMINI API) DENTRO DO PAINEL ---
               endereco_completo = str(row["Endereço"])
               titulo_imovel = str(row["Título do Imóvel"])
               cidade_imovel = str(row["Cidade Imóvel"])
@@ -1362,7 +1363,6 @@ else:
               valor_avaliacao = row["Valor de Avaliação (R$)"]
               
               bairro_encontrado = ""
-              
               partes_end = [p.strip() for p in endereco_completo.split(",")]
               for parte in partes_end:
                 p_lower = parte.lower()
@@ -1381,24 +1381,34 @@ else:
                 if cidade_imovel.lower() not in candidato.lower() and not any(r in candidato.lower() for r in ["rua", "av", "avenida", "sp"]):
                   bairro_encontrado = candidato
 
-              # Pergunta formatada pronta para enviar para a IA (Gemini)
               local_texto = f"{bairro_encontrado}, {cidade_imovel}" if bairro_encontrado else cidade_imovel
-              pergunta_ia = f"Qual é o valor médio de mercado por metro quadrado e o preço médio de um(a) {tipo_bem} no bairro {local_texto}? O imóvel tem valor de avaliação de R$ {valor_avaliacao:,.2f}. A avaliação está condizente com o mercado atual?"
-              
-              url_gemini = f"https://gemini.google.com/app?q={quote(pergunta_ia)}"
-              
-              st.markdown(
-                  f"""
-                  <div style="margin-top: -10px; margin-bottom: 10px;">
-                      <a href="{url_gemini}" target="_blank" style="text-decoration: none;">
-                          <div style="background-color: #8B5CF6; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                              🤖 Consultar IA sobre o Mercado da Região (Gemini)
-                          </div>
-                      </a>
-                  </div>
-                  """,
-                  unsafe_allow_html=True,
-              )
+
+              # Painel expansível com a resposta gerada pela IA
+              with st.expander("🤖 Análise de Mercado por IA (Gemini)", expanded=False):
+                chave_sessao_ia = f"ia_resp_{idx}_{row['Título_Imóvel'] if 'Título_Imóvel' in row else idx}"
+                
+                if st.button("✨ Gerar Análise da Região", key=f"btn_ia_{idx}_{row['Título do Imóvel'][:15]}"):
+                  with st.spinner("Consultando inteligência artificial..."):
+                    try:
+                      client = genai.Client()
+                      prompt = (
+                          f"Aja como um especialista imobiliário. Analise o mercado para um(a) {tipo_bem} "
+                          f"localizado(a) em {local_texto}. O valor de avaliação oficial é de R$ {valor_avaliacao:,.2f}. "
+                          f"Forneça uma estimativa resumida do valor médio por m² nesta região e diga se este valor de "
+                          f"avaliação está coerente ou sub/superavaliado com base no mercado imobiliário atual."
+                      )
+                      response = client.models.generate_content(
+                          model="gemini-2.5-flash",
+                          contents=prompt,
+                      )
+                      st.session_state[chave_sessao_ia] = response.text
+                    except Exception as e:
+                      st.session_state[chave_sessao_ia] = f"Erro ao consultar a IA: {e}"
+
+                if chave_sessao_ia in st.session_state:
+                  st.markdown(st.session_state[chave_sessao_ia])
+                else:
+                  st.info("Clique no botão acima para carregar a análise da IA diretamente aqui.")
 
               # Botões de Ação (Escolher, Anúncio, WhatsApp)
               b_col1, b_col2, b_col3 = st.columns(3)
@@ -1454,7 +1464,7 @@ else:
               
               st.write("---")
 
-        renderizar_vitrine_v8(df_paginado)
+        renderizar_vitrine_v9(df_paginado)
 
   elif "df_final" not in st.session_state:
     st.info(
