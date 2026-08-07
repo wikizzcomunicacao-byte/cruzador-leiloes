@@ -1288,26 +1288,31 @@ else:
             )
 
             with col_target:
+              st.markdown(badge_html, unsafe_allow_html=True)
+
               with st.container():
                 st.markdown(
                     """
                     <style>
                     div[data-testid="column"] button[kind="secondary"] {
-                        background: transparent !important;
+                        background-color: #0052CC !important;
+                        color: white !important;
                         border: none !important;
+                        border-radius: 8px !important;
                         box-shadow: none !important;
-                        font-size: 1.3rem !important;
-                        padding: 0px !important;
-                        min-height: unset !important;
+                        font-size: 1.2rem !important;
+                        padding: 0.4rem 0.6rem !important;
+                        min-height: 40px !important;
+                        width: 100% !important;
                         line-height: 1 !important;
+                    }
+                    div[data-testid="column"] button[kind="secondary"]:hover {
+                        background-color: #003D99 !important;
                     }
                     </style>
                     """,
                     unsafe_allow_html=True,
                 )
-
-                # Mantém a badge à esquerda no topo do card
-                st.markdown(badge_html, unsafe_allow_html=True)
 
                 st.markdown(
                     f"""
@@ -1329,22 +1334,14 @@ else:
                     unsafe_allow_html=True,
                 )
 
-              # Parte inferior direita: Link e Estrela lado a lado
+              # Parte inferior direita: Estrela e Link lado a lado com o mesmo estilo e tamanho
               r_col1, r_col2 = st.columns([1, 1])
               with r_col1:
-                st.markdown(
-                    f"""
-                    <a href="{link_url}" target="_blank" title="Ver Anúncio Oficial" style="text-decoration: none; font-size: 1.3rem; background: #E0E7FF; padding: 4px 10px; border-radius: 8px; display: inline-block;">
-                        🔗
-                    </a>
-                    """,
-                    unsafe_allow_html=True,
-                )
-              with r_col2:
                 label_estrela = "⭐" if ja_selecionado else "☆"
                 if st.button(
                     label_estrela,
                     key=f"btn_estrela_{idx}_{row['Título do Imóvel']}",
+                    use_container_width=True,
                 ):
                   if ja_selecionado:
                     st.session_state["imoveis_selecionados"] = [
@@ -1361,6 +1358,16 @@ else:
                         row.to_dict()
                     )
                   st.rerun()
+
+              with r_col2:
+                st.markdown(
+                    f"""
+                    <a href="{link_url}" target="_blank" title="Ver Anúncio Oficial" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: #E0E7FF; color: #3730A3; border-radius: 8px; height: 40px; font-size: 1.2rem; font-weight: bold; width: 100%;">
+                        🔗
+                    </a>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
               st.write(" ")
 
