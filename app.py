@@ -148,7 +148,7 @@ else:
             border: 1px solid #E2E8F0;
             border-radius: 12px;
             padding: 1.2rem;
-            padding-bottom: 3.5rem; /* Espaço reservado internamente na base para os botões */
+            padding-bottom: 3.5rem;
             margin-bottom: 1.5rem;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             position: relative;
@@ -1291,7 +1291,7 @@ else:
 
               label_estrela = "⭐" if ja_selecionado else "☆"
 
-              # Bloco do card e botão de link injetados juntos dentro da mesma div estrutural absoluta
+              # Renderização unificada do card com a tag HTML completa contendo o link embutido
               st.markdown(
                   f"""
                     <div class="property-card">
@@ -1306,7 +1306,7 @@ else:
                         </div>
                         <p style="font-size: 0.85rem; color: #475569; margin-bottom: 0;"><b>Endereço:</b> {row['Endereço']}</p>
                         
-                        <!-- Botão de link posicionado absolutamente DENTRO da caixa branca no canto inferior direito -->
+                        <!-- Botão de link posicionado absolutamente DENTRO do card no canto inferior direito -->
                         <div style="position: absolute; bottom: 12px; right: 15px; display: flex; gap: 6px; z-index: 5;">
                             <a href="{link_url}" target="_blank" title="Ver Anúncio Oficial" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: #E0E7FF; color: #3730A3; border-radius: 6px; width: 34px; height: 34px; font-size: 1rem; font-weight: bold;">
                                 🔗
@@ -1317,9 +1317,11 @@ else:
                   unsafe_allow_html=True,
               )
 
-              # Posicionamento exato do botão de favorito interativo do Streamlit sobreposto perfeitamente ao lado do link
+              # Posicionamento absoluto perfeito para o botão da estrela ficar perfeitamente alinhado ao lado do link dentro do card
               st.markdown(
-                  '<div style="margin-top: -52px; padding-right: 56px; display: flex; justify-content: flex-end;">',
+                  f"""
+                    <div style="margin-top: -55px; padding-right: 56px; display: flex; justify-content: flex-end; position: relative; z-index: 6;">
+                    """,
                   unsafe_allow_html=True,
               )
               if st.button(
