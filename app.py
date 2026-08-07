@@ -2,6 +2,7 @@ from datetime import datetime
 import io
 import re
 from urllib.parse import quote
+from duckduckgo_search import DDGS
 from fpdf import FPDF
 import numpy as np
 import openpyxl
@@ -1259,7 +1260,7 @@ else:
         )
 
         @st.fragment
-        def renderizar_vitrine_v25(df_cards):
+        def renderizar_vitrine_v26(df_cards):
           cols_cards = st.columns(2)
           for idx, (_, row) in enumerate(df_cards.iterrows()):
             col_target = cols_cards[idx % 2]
@@ -1333,13 +1334,28 @@ else:
                   unsafe_allow_html=True,
               )
 
-              # PAINEL EXPANSÍVEL DE ANÁLISE DE MERCADO OTIMIZADO
+              # PAINEL EXPANSÍVEL DE ANÁLISE DE MERCADO VIA WEB SCRAPING GRATUITO
               with st.expander("🔍 Ver Média de Valor da Região (Pesquisa Inteligente)"):
                 if st.button(
-                    "✨ Gerar Análise de Mercado",
+                    "✨ Gerar Análise de Mercado na Web",
                     key=f"btn_pesq_{idx}_{row['Título do Imóvel'][:15]}",
                 ):
-                  with st.spinner("Analisando mercado da região..."):
+                  with st.spinner(
+                      "Buscando referências reais na internet..."
+                  ):
+                    end_limpo = f"{row['Endereço']}, {row['Cidade Imóvel']} - {row['Estado Imóvel']}"
+                    termo_busca = f"media valor de mercado imovel {end_limpo}"
+
+                    # Executa a busca real gratuita via DuckDuckGo
+                    resultados_web = []
+                    try:
+                      with DDGS() as ddgs:
+                        resultados_web = list(
+                            ddgs.text(termo_busca, max_results=3)
+                        )
+                    except Exception as e:
+                      resultados_web = []
+
                     val_avaliacao = (
                         row["Valor de Avaliação (R$)"]
                         if pd.notnull(row["Valor de Avaliação (R$)"])
@@ -1349,31 +1365,44 @@ else:
                     v_min = val_avaliacao * 0.85
                     v_max = val_avaliacao * 1.15
 
-                    end_limpo = f"{row['Endereço']}, {row['Cidade Imóvel']} - {row['Estado Imóvel']}"
-                    termo_pesquisa = f"media valor de mercado {end_limpo}"
-                    url_google = f"https://www.google.com/search?q={quote(termo_pesquisa)}"
-
-                    st.markdown(f"""
+                    st.markdown(
+                        f"""
                                 <p style="font-size: 0.9rem; color: #334155; margin-bottom: 8px;">
                                     <b>Endereço Analisado:</b> <code>{end_limpo}</code>
                                 </p>
                                 <ul style="color: #1E293B; font-size: 0.92rem; line-height: 1.6; padding-left: 20px;">
                                     <li><b>Valor Médio de Referência:</b> R$ {val_avaliacao:,.2f}</li>
                                     <li><b>Faixa Estimada de Mercado:</b> R$ {v_min:,.2f} a R$ {v_max:,.2f}</li>
-                                    <li><b>Avaliação Oficial do Leiloeiro:</b> R$ {row['Valor de Avaliação (R$)']:,.2f} (Condizente com o histórico da região).</li>
+                                    <li><b>Avaliação Oficial do Leiloeiro:</b> R$ {row['Valor de Avaliação (R$)']:,.2f}</li>
                                 </ul>
-                                """, unsafe_allow_html=True)
-
-                    st.markdown(
-                        f"""
-                        <a href="{url_google}" target="_blank" style="text-decoration: none;">
-                            <div style="background-color: #4285F4; color: white; padding: 8px 12px; border-radius: 6px; text-align: center; font-weight: bold; font-size: 0.85rem; margin-top: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                                🌐 Buscar dados atualizados deste endereço no Google
-                            </div>
-                        </a>
-                        """,
+                                <hr style="border: 0.5px solid #E2E8F0; margin: 8px 0;">
+                                <p style="font-size: 0.85rem; font-weight: bold; color: #0052CC;">🌐 Principais Achados na Internet:</p>
+                                """,
                         unsafe_allow_html=True,
                     )
+
+                    if resultados_web:
+                      for item in resultados_web:
+                        titulo_site = item.get("title", "Link Externo")
+                        link_site = item.get("href", "#")
+                        snippet_site = item.get(
+                            "body", "Sem descrição disponível."
+                        )
+                        st.markdown(
+                            f"""
+                                    <div style="font-size: 0.82rem; margin-bottom: 6px; padding: 6px; background-color: #F8FAFC; border-radius: 6px; border: 1px solid #E2E8F0;">
+                                        <a href="{link_site}" target="_blank" style="text-decoration: none; color: #0052CC; font-weight: bold;">🔗 {titulo_site}</a>
+                                        <p style="color: #475569; margin: 2px 0 0 0;">{snippet_site}</p>
+                                    </div>
+                                    """,
+                            unsafe_allow_html=True,
+                        )
+                    else:
+                      st.info(
+                          "Não foram encontrados recortes diretos na web para"
+                          " este endereço específico, mas você pode usar a base"
+                          " oficial."
+                      )
 
               # BOTÕES DE AÇÃO
               b_col1, b_col2, b_col3 = st.columns(3)
@@ -1429,7 +1458,7 @@ else:
 
               st.write("---")
 
-        renderizar_vitrine_v25(df_paginado)
+        renderizar_vitrine_v26(df_paginado)
 
     with tab5:
       st.write(" ")
