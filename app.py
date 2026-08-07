@@ -188,7 +188,6 @@ else:
       unsafe_allow_html=True,
   )
 
-
   # FUNÇÕES AUXILIARES DE TRATAMENTO
   def clean_ascii(text):
     if not isinstance(text, str):
@@ -243,7 +242,6 @@ else:
       text = text.replace(k, v)
     return text.encode("latin-1", "replace").decode("latin-1")
 
-
   def normalize(text):
     if not isinstance(text, str):
       return ""
@@ -256,7 +254,6 @@ else:
     text = re.sub(r"[ç]", "c", text)
     text = re.sub(r"[^a-z0-9\s]", " ", text)
     return " ".join(text.split())
-
 
   def parse_budget(budget_str):
     budget_str = str(budget_str)
@@ -273,7 +270,6 @@ else:
     else:
       return 0, 999999999
 
-
   def parse_types(tipos_str):
     norm_t = normalize(tipos_str)
     res = set()
@@ -288,7 +284,6 @@ else:
     if "outros" in norm_t:
       res.update(["Area Rural", "Comercial", "Indefinido", "Vaga de Garagem"])
     return list(res)
-
 
   class InformativoLeiloesPDF(FPDF):
 
@@ -333,7 +328,6 @@ else:
           0,
           "C",
       )
-
 
   def gerar_pdf_informativo(nome_investidor, df_inv):
     pdf = InformativoLeiloesPDF()
@@ -577,7 +571,6 @@ else:
       return out.encode("latin-1")
     return bytes(out)
 
-
   def gerar_excel_profissional(df_input):
     output = io.BytesIO()
     df_export = df_input.copy()
@@ -668,7 +661,6 @@ else:
 
     return output.getvalue()
 
-
   # CABEÇALHO PRINCIPAL
   col_head1, col_head2 = st.columns([4, 1])
   with col_head1:
@@ -757,6 +749,7 @@ else:
 
         cols = list(df_investidores.columns)
         resultados = []
+        investidores_sem_imoveis = 0
 
         for idx, row in df_investidores.iterrows():
           nome = str(row["Nome Completo"]).strip()
@@ -870,6 +863,9 @@ else:
               by=["desconto_%", "preco_effective"], ascending=[False, True]
           )
 
+          if sub_sorted.empty:
+            investidores_sem_imoveis += 1
+
           for _, imovel in sub_sorted.iterrows():
             preco = imovel["preco_effective"]
             avaliac = imovel["Valor de Avaliação do Leiloeiro"]
@@ -901,6 +897,7 @@ else:
             })
 
         st.session_state["df_final"] = pd.DataFrame(resultados)
+        st.session_state["investidores_sem_imoveis"] = investidores_sem_imoveis
         st.session_state["imoveis_selecionados"] = []
         st.toast("✅ Processamento Enterprise concluído!", icon="🎉")
 
@@ -988,7 +985,7 @@ else:
 
     with tab1:
       st.write(" ")
-      kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+      kpi1, kpi2, kpi3 = st.columns(3)
       kpi1.metric("🏢 Total Imóveis", f"{len(df_filtered):,}")
       kpi2.metric(
           "👥 Investidores",
@@ -996,18 +993,8 @@ else:
           if not df_filtered.empty
           else "0",
       )
-      kpi3.metric(
-          "🔥 Maior Desconto",
-          f"{df_filtered['Desconto (%)'].max():.1f}%"
-          if not df_filtered.empty
-          else "0%",
-      )
-      total_lucro_liq = (
-          df_filtered["Lucro Líquido Real (R$)"].sum()
-          if not df_filtered.empty
-          else 0
-      )
-      kpi4.metric("💰 Lucro Líquido Acumulado", f"R$ {total_lucro_liq:,.0f}")
+      inv_sem_imoveis_val = st.session_state.get("investidores_sem_imoveis", 0)
+      kpi3.metric("🔍 Investidores que não acharam imóveis", f"{inv_sem_imoveis_val}")
 
       st.markdown("---")
 
