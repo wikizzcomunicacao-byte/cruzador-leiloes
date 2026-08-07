@@ -1278,7 +1278,7 @@ else:
         )
 
         @st.fragment
-        def renderizar_vitrine_v11(df_cards):
+        def renderizar_vitrine_v12(df_cards):
           cols_cards = st.columns(2)
           for idx, (_, row) in enumerate(df_cards.iterrows()):
             col_target = cols_cards[idx % 2]
@@ -1354,7 +1354,7 @@ else:
                   unsafe_allow_html=True,
               )
 
-              # --- EXTRAÇÃO DO BAIRRO E BOTÃO INTELIGENTE PARA A IA ---
+              # --- EXTRAÇÃO DO BAIRRO E MONTAGEM DA PERGUNTA PARA A IA ---
               endereco_completo = str(row["Endereço"])
               titulo_imovel = str(row["Título do Imóvel"])
               cidade_imovel = str(row["Cidade Imóvel"])
@@ -1383,14 +1383,19 @@ else:
               local_texto = f"{bairro_encontrado}, {cidade_imovel}" if bairro_encontrado else cidade_imovel
               pergunta_ia = f"Qual é o valor médio de mercado por metro quadrado e o preço médio de um(a) {tipo_bem} no bairro {local_texto}? O imóvel tem valor de avaliação de R$ {valor_avaliacao:,.2f}. A avaliação está condizente com o mercado atual?"
               
-              url_gemini = f"https://gemini.google.com/app?q={quote(pergunta_ia)}"
+              # Widget nativo de texto copiável e botão para abrir o Gemini
+              st.text_input(
+                  "📋 Pergunta pronta para a IA (Copie abaixo):",
+                  value=pergunta_ia,
+                  key=f"txt_ia_{idx}_{row['Título do Imóvel'][:15]}"
+              )
               
               st.markdown(
                   f"""
-                  <div style="margin-top: -10px; margin-bottom: 10px;">
-                      <a href="{url_gemini}" target="_blank" style="text-decoration: none;">
+                  <div style="margin-top: -5px; margin-bottom: 10px;">
+                      <a href="https://gemini.google.com/app" target="_blank" style="text-decoration: none;">
                           <div style="background-color: #8B5CF6; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                              🤖 Consultar IA sobre o Mercado da Região (Gemini)
+                              🤖 Abrir Gemini (Cole com Ctrl+V)
                           </div>
                       </a>
                   </div>
@@ -1452,7 +1457,7 @@ else:
               
               st.write("---")
 
-        renderizar_vitrine_v11(df_paginado)
+        renderizar_vitrine_v12(df_paginado)
 
   elif "df_final" not in st.session_state:
     st.info(
