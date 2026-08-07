@@ -289,8 +289,14 @@ else:
 
     def header(self):
       if self.page_no() > 1:
+        try:
+          self.image("logo.png", 10, 8, 30)
+        except Exception:
+          pass
+
         self.set_font("Arial", "B", 8)
         self.set_text_color(100, 116, 139)
+        self.set_xy(45, 10)
         self.cell(
             0,
             5,
@@ -300,8 +306,8 @@ else:
             "L",
         )
         self.set_draw_color(226, 232, 240)
-        self.line(10, 12, 200, 12)
-        self.ln(3)
+        self.line(10, 16, 200, 16)
+        self.ln(5)
 
     def footer(self):
       self.set_y(-12)
@@ -323,7 +329,13 @@ else:
     pdf.set_auto_page_break(auto=True, margin=15)
 
     pdf.add_page()
-    pdf.ln(15)
+    pdf.ln(5)
+
+    try:
+      pdf.image("logo.png", x=80, y=12, w=50)
+      pdf.ln(25)
+    except Exception:
+      pdf.ln(5)
 
     pdf.set_font("Arial", "B", 22)
     pdf.set_text_color(30, 41, 59)
