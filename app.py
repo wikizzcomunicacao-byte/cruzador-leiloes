@@ -1259,7 +1259,7 @@ else:
         )
 
         @st.fragment
-        def renderizar_vitrine_v21(df_cards):
+        def renderizar_vitrine_v22(df_cards):
           cols_cards = st.columns(2)
           for idx, (_, row) in enumerate(df_cards.iterrows()):
             col_target = cols_cards[idx % 2]
@@ -1297,10 +1297,6 @@ else:
                 f"🔗 Ver Anúncio: {row['Link do Imóvel']}"
             )
             url_wsp = f"https://api.whatsapp.com/send?text={quote(msg_wsp)}"
-
-            # Termo estruturado para pesquisa de mercado
-            termo_pesquisa = f"media valor {row['Endereço']}, {row['Cidade Imóvel']}"
-            url_google_pesquisa = f"https://www.google.com/search?q={quote(termo_pesquisa)}"
 
             with col_target:
               link_url = (
@@ -1416,7 +1412,7 @@ else:
 
               st.write("---")
 
-        renderizar_vitrine_v21(df_paginado)
+        renderizar_vitrine_v22(df_paginado)
 
     with tab5:
       st.write(" ")
@@ -1435,14 +1431,14 @@ else:
             min_value=0.0,
             value=250000.0,
             step=10000.0,
-            format="R$ %,.2f",
+            format="%,.2f",
         )
         val_mercado = st.number_input(
             "Valor de Mercado Estimado / Avaliação (R$)",
             min_value=0.0,
             value=400000.0,
             step=10000.0,
-            format="R$ %,.2f",
+            format="%,.2f",
         )
         p_leiloeiro = (
             st.slider("Comissão do Leiloeiro (%)", 0.0, 10.0, 5.0, 0.5) / 100.0
@@ -1456,7 +1452,7 @@ else:
             min_value=0.0,
             value=15000.0,
             step=5000.0,
-            format="R$ %,.2f",
+            format="%,.2f",
         )
 
       with calc_col2:
