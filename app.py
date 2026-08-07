@@ -288,6 +288,13 @@ else:
   class InformativoLeiloesPDF(FPDF):
 
     def header(self):
+      # Aplica o papel de parede (fundo.png) em todas as páginas no fundo (x=0, y=0, largura=210mm, altura=297mm)
+      try:
+        self.image("fundo.png", 0, 0, 210, 297)
+      except Exception:
+        pass
+
+      # Insere o logotipo (logo.png) no topo esquerdo a partir da página 2
       if self.page_no() > 1:
         try:
           self.image("logo.png", 10, 8, 30)
