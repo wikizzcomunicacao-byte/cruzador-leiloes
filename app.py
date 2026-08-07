@@ -148,9 +148,10 @@ else:
             border: 1px solid #E2E8F0;
             border-radius: 12px;
             padding: 1.2rem;
-            margin-bottom: 1rem;
+            margin-bottom: 0.5rem;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
         }
         .property-card:hover {
             transform: translateY(-2px);
@@ -1167,8 +1168,7 @@ else:
       else:
         st.info(
             "💡 Nenhum imóvel foi selecionado ainda. Vá até a aba **👤 Vitrine /"
-            " Cards por Investidor** e clique no botão **⭐ Escolher Imóvel**"
-            " nos cards que desejar."
+            " Cards por Investidor** e clique na estrela nos cards que desejar."
         )
 
     with tab4:
@@ -1288,14 +1288,54 @@ else:
             )
 
             with col_target:
-              # Container principal do card com o botão de favoritar (estrela) no topo direito
               with st.container():
+                # Estilização customizada para compactar o botão do Streamlit transformando-o em uma estrela minimalista no canto superior direito
+                st.markdown(
+                    """
+                    <style>
+                    div[data-testid="column"] button[kind="secondary"] {
+                        background: transparent !important;
+                        border: none !important;
+                        box-shadow: none !important;
+                        font-size: 1.3rem !important;
+                        padding: 0px !important;
+                        min-height: unset !important;
+                        line-height: 1 !important;
+                        float: right;
+                    }
+                    </style>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+                c_top1, c_top2 = st.columns([5, 1])
+                with c_top1:
+                  st.markdown(badge_html, unsafe_allow_html=True)
+                with c_top2:
+                  label_estrela = "⭐" if ja_selecionado else "☆"
+                  if st.button(
+                      label_estrela,
+                      key=f"btn_estrela_{idx}_{row['Título do Imóvel']}",
+                  ):
+                    if ja_selecionado:
+                      st.session_state["imoveis_selecionados"] = [
+                          item
+                          for item in st.session_state["imoveis_selecionados"]
+                          if not (
+                              item["Título do Imóvel"] == row["Título do Imóvel"]
+                              and item["Nome do Investidor"]
+                              == row["Nome do Investidor"]
+                          )
+                      ]
+                    else:
+                      st.session_state["imoveis_selecionados"].append(
+                          row.to_dict()
+                      )
+                    st.rerun()
+
                 st.markdown(
                     f"""
-                    <div class="property-card">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                            <div>{badge_html}</div>
-                        </div>
+                    <div class="property-card" style="margin-top: -10px;">
                         <h4 style="margin-top: 4px; margin-bottom: 4px; color: #1E293B;">{row['Título do Imóvel']}</h4>
                         <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']}</p>
                         <div style="margin-bottom: 8px;">
@@ -1305,50 +1345,18 @@ else:
                             <span class="price-costs">• ITBI e Cartório: R$ {val_itbi_cartorio:,.2f}</span><br>
                             <span class="price-costs">🛠️ Custo Total Estimado: R$ {row['Custo Total Estimado (R$)']:,.2f}</span>
                         </div>
-                        <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px;"><b>Endereço:</b> {row['Endereço']}</p>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                            <p style="font-size: 0.85rem; color: #475569; margin-bottom: 0;"><b>Endereço:</b> {row['Endereço']}</p>
+                            <a href="{link_url}" target="_blank" title="Ver Anúncio Oficial" style="text-decoration: none; font-size: 1.3rem; background: #E0E7FF; padding: 4px 10px; border-radius: 8px;">
+                                🔗
+                            </a>
+                        </div>
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
 
-              # Botões de Estrela (Favoritar) e Link de Anúncio integrados lado a lado
-              sub_col1, sub_col2 = st.columns([1, 2])
-              with sub_col1:
-                label_estrela = "⭐ Favoritado" if ja_selecionado else "☆ Favoritar"
-                if st.button(
-                    label_estrela,
-                    key=f"btn_estrela_{idx}_{row['Título do Imóvel']}",
-                    use_container_width=True,
-                ):
-                  if ja_selecionado:
-                    st.session_state["imoveis_selecionados"] = [
-                        item
-                        for item in st.session_state["imoveis_selecionados"]
-                        if not (
-                            item["Título do Imóvel"] == row["Título do Imóvel"]
-                            and item["Nome do Investidor"]
-                            == row["Nome do Investidor"]
-                        )
-                    ]
-                  else:
-                    st.session_state["imoveis_selecionados"].append(
-                        row.to_dict()
-                    )
-                  st.rerun()
-
-              with sub_col2:
-                st.markdown(
-                    f"""
-                    <a href="{link_url}" target="_blank" style="text-decoration: none;">
-                        <button style="background-color: #0052CC; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 0.9rem;">
-                            🔗 Ver Anúncio Oficial
-                        </button>
-                    </a>
-                    """,
-                    unsafe_allow_html=True,
-                )
-
-              st.write("---")
+              st.write(" ")
 
         renderizar_vitrine_v25(df_paginado)
 
