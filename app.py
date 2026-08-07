@@ -1331,7 +1331,7 @@ else:
                   for item in st.session_state["imoveis_selecionados"]
               )
 
-              # Card unificado com todas as informações limpas
+              # Card unificado com as informações básicas
               st.markdown(
                   f"""
                             <div class="property-card">
@@ -1354,8 +1354,31 @@ else:
                   unsafe_allow_html=True,
               )
 
-              # Botão perfeitamente formatado para consulta de mercado no Google sob demanda
-              termo_pesquisa = f"media valor {row['Endereço']} {row['Cidade Imóvel']}"
+              # --- FILTRAGEM INTELIGENTE DE BAIRRO E CIDADE (EXEMPLO DA SUA IMAGEM) ---
+              endereco_completo = str(row["Endereço"])
+              cidade_imovel = str(row["Cidade Imóvel"])
+              
+              # Tenta extrair o bairro procurando termos comuns após vírgulas ou palavras-chave
+              partes_end = [p.strip() for p in endereco_completo.split(",")]
+              bairro_encontrado = ""
+              
+              for parte in partes_end:
+                # Procura por palavras que pareçam bairros ou zonas (ex: Jardim, Vila, Centro, Zona Sul, etc.)
+                if any(termo in parte.lower() for term in ["jardim", "vila", "bairro", "parque", "centro", "zona", "loteamento"]):
+                  bairro_encontrado = parte
+                  break
+              
+              # Se não achar por palavra-chave, pega a penúltima ou antepenúltima parte do endereço se houver bastante detalhe
+              if not bairro_encontrado and len(partes_end) >= 3:
+                bairro_encontrado = partes_end[-3] # Geralmente onde fica o bairro antes da cidade/estado
+              elif not bairro_encontrado and len(partes_end) == 2:
+                bairro_encontrado = partes_end[0]
+
+              # Limpa eventuais repetições de cidade/estado no termo de pesquisa
+              termo_pesquisa = f"media valor {bairro_encontrado}, {cidade_imovel}" if bairro_encontrado else f"media valor {cidade_imovel}"
+              # Remove duplicidades idênticas caso o bairro tenha o mesmo nome da cidade
+              termo_pesquisa = re.sub(r',\s*([^,]+),\s*\1', r', \1', termo_pesquisa)
+              
               url_google_pesquisa = f"https://www.google.com/search?q={quote(termo_pesquisa)}"
               
               st.markdown(
