@@ -292,10 +292,8 @@ else:
 
 
   def gerar_pdf_informativo(nome_investidor, df_inv):
-    # Template PDF original da LCR
-    template_path = (
-        "08.09.2025 - SJRP - INFORMATIVO DE LEILÕES IMOBILIÁRIOS (1).pdf"
-    )
+    # Nome exato do template PDF carregado no repositório
+    template_path = "template.pdf"
 
     try:
       reader = PdfReader(template_path)
@@ -310,14 +308,13 @@ else:
       return pdf_output.getvalue()
 
     except Exception:
-      # Fallback caso o PDF base não seja encontrado no diretório
       pdf = FPDF()
       pdf.add_page()
       pdf.set_font("Arial", "B", 12)
       pdf.cell(
           0,
           10,
-          clean_ascii(f"Informativo de Leilao para: {nome_investidor}"),
+          clean_ascii(f"Informativo para: {nome_investidor}"),
           0,
           1,
           "C",
