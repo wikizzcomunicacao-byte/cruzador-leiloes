@@ -1278,7 +1278,7 @@ else:
         )
 
         @st.fragment
-        def renderizar_vitrine_v7(df_cards):
+        def renderizar_vitrine_v8(df_cards):
           cols_cards = st.columns(2)
           for idx, (_, row) in enumerate(df_cards.iterrows()):
             col_target = cols_cards[idx % 2]
@@ -1354,10 +1354,12 @@ else:
                   unsafe_allow_html=True,
               )
 
-              # --- EXTRAÇÃO LIMPA E CERTA DO BAIRRO E CIDADE ---
+              # --- EXTRAÇÃO DO BAIRRO E MONTAGEM DA PERGUNTA PARA A IA ---
               endereco_completo = str(row["Endereço"])
               titulo_imovel = str(row["Título do Imóvel"])
               cidade_imovel = str(row["Cidade Imóvel"])
+              tipo_bem = str(row["Tipo de Bem"])
+              valor_avaliacao = row["Valor de Avaliação (R$)"]
               
               bairro_encontrado = ""
               
@@ -1379,20 +1381,18 @@ else:
                 if cidade_imovel.lower() not in candidato.lower() and not any(r in candidato.lower() for r in ["rua", "av", "avenida", "sp"]):
                   bairro_encontrado = candidato
 
-              # Termo de pesquisa limpo e direto: "Bairro, Cidade"
-              if bairro_encontrado:
-                termo_pesquisa = f"imoveis {bairro_encontrado} {cidade_imovel}"
-              else:
-                termo_pesquisa = f"imoveis {cidade_imovel}"
+              # Pergunta formatada pronta para enviar para a IA (Gemini)
+              local_texto = f"{bairro_encontrado}, {cidade_imovel}" if bairro_encontrado else cidade_imovel
+              pergunta_ia = f"Qual é o valor médio de mercado por metro quadrado e o preço médio de um(a) {tipo_bem} no bairro {local_texto}? O imóvel tem valor de avaliação de R$ {valor_avaliacao:,.2f}. A avaliação está condizente com o mercado atual?"
               
-              url_google_pesquisa = f"https://www.google.com/search?q={quote(termo_pesquisa)}"
+              url_gemini = f"https://gemini.google.com/app?q={quote(pergunta_ia)}"
               
               st.markdown(
                   f"""
                   <div style="margin-top: -10px; margin-bottom: 10px;">
-                      <a href="{url_google_pesquisa}" target="_blank" style="text-decoration: none;">
-                          <div style="background-color: #2563EB; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                              🔍 Pesquisar Bairro e Cidade no Google
+                      <a href="{url_gemini}" target="_blank" style="text-decoration: none;">
+                          <div style="background-color: #8B5CF6; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                              🤖 Consultar IA sobre o Mercado da Região (Gemini)
                           </div>
                       </a>
                   </div>
@@ -1454,7 +1454,7 @@ else:
               
               st.write("---")
 
-        renderizar_vitrine_v7(df_paginado)
+        renderizar_vitrine_v8(df_paginado)
 
   elif "df_final" not in st.session_state:
     st.info(
