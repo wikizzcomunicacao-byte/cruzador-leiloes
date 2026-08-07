@@ -1306,7 +1306,7 @@ else:
                   unsafe_allow_html=True,
               )
 
-              # Botões logo abaixo alinhados à direita com espaçamento e estilo compacto
+              # Estilização CSS para transformar os botões em blocos grandes de 50% / 50% lado a lado
               st.markdown(
                   """
                     <style>
@@ -1314,12 +1314,13 @@ else:
                         background-color: #0052CC !important;
                         color: white !important;
                         border: none !important;
-                        border-radius: 6px !important;
-                        box-shadow: none !important;
-                        font-size: 0.95rem !important;
-                        padding: 0px !important;
-                        min-height: 36px !important;
-                        height: 36px !important;
+                        border-radius: 8px !important;
+                        box-shadow: 0 2px 6px rgba(0,0,0,0.1) !important;
+                        font-size: 1.1rem !important;
+                        font-weight: bold !important;
+                        padding: 0.6rem !important;
+                        min-height: 44px !important;
+                        height: 44px !important;
                         width: 100% !important;
                         display: flex;
                         align-items: center;
@@ -1327,21 +1328,23 @@ else:
                     }
                     div[data-testid="column"] button[kind="secondary"]:hover {
                         background-color: #003D99 !important;
+                        box-shadow: 0 4px 10px rgba(0,0,0,0.15) !important;
                     }
                     </style>
                     """,
                   unsafe_allow_html=True,
               )
 
-              _, col_b1, col_b2 = st.columns([4.2, 0.9, 0.9])
+              col_b1, col_b2 = st.columns(2)
 
               with col_b1:
-                label_estrela = "⭐" if ja_selecionado else "☆"
+                label_estrela = (
+                    "⭐ Favoritado" if ja_selecionado else "☆ Favoritar"
+                )
                 if st.button(
                     label_estrela,
                     key=f"btn_estrela_{idx}_{row['Título do Imóvel']}",
                     use_container_width=True,
-                    help="Favoritar imóvel",
                 ):
                   if ja_selecionado:
                     st.session_state["imoveis_selecionados"] = [
@@ -1362,8 +1365,8 @@ else:
               with col_b2:
                 st.markdown(
                     f"""
-                    <a href="{link_url}" target="_blank" title="Ver Anúncio Oficial" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: #E0E7FF; color: #3730A3; border-radius: 6px; height: 36px; font-size: 1rem; font-weight: bold; width: 100%;">
-                        🔗
+                    <a href="{link_url}" target="_blank" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: #E0E7FF; color: #3730A3; border-radius: 8px; height: 44px; font-size: 0.95rem; font-weight: bold; width: 100%; box-shadow: 0 2px 6px rgba(0,0,0,0.05); transition: all 0.2s ease;">
+                        🔗 Ver Anúncio
                     </a>
                     """,
                     unsafe_allow_html=True,
