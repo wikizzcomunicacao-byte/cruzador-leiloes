@@ -148,10 +148,8 @@ else:
             border: 1px solid #E2E8F0;
             border-radius: 12px;
             padding: 1.2rem;
-            padding-bottom: 3.5rem;
-            margin-bottom: 1.5rem;
+            margin-bottom: 0.5rem;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            position: relative;
         }
         .property-card:hover {
             box-shadow: 0 4px 14px rgba(0,0,0,0.1);
@@ -351,7 +349,7 @@ else:
             "disponíveis em leilão. Esta é uma oportunidade única para adquirir "
             "bens com preços atrativos e grande potencial de valorização!\n\n"
             "Confira adiante algumas das propriedades em destaque, de "
-            "acordo com las regiões selecionadas por você."
+            "acordo com as regiões selecionadas por você."
         ),
     )
     pdf.ln(15)
@@ -1289,9 +1287,7 @@ else:
             with col_target:
               st.markdown(badge_html, unsafe_allow_html=True)
 
-              label_estrela = "⭐" if ja_selecionado else "☆"
-
-              # Renderização unificada do card com link e botão estruturados perfeitamente
+              # Exibição do card branco principal
               st.markdown(
                   f"""
                     <div class="property-card">
@@ -1305,40 +1301,74 @@ else:
                             <span class="price-costs">🛠️ Custo Total Estimado: R$ {row['Custo Total Estimado (R$)']:,.2f}</span>
                         </div>
                         <p style="font-size: 0.85rem; color: #475569; margin-bottom: 0;"><b>Endereço:</b> {row['Endereço']}</p>
-                        
-                        <div style="position: absolute; bottom: 12px; right: 15px; display: flex; gap: 6px; z-index: 5;">
-                            <a href="{link_url}" target="_blank" title="Ver Anúncio Oficial" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: #E0E7FF; color: #3730A3; border-radius: 6px; width: 34px; height: 34px; font-size: 1rem; font-weight: bold;">
-                                🔗
-                            </a>
-                        </div>
                     </div>
                     """,
                   unsafe_allow_html=True,
               )
 
+              # Botões logo abaixo alinhados à direita com espaçamento e estilo compacto
               st.markdown(
-                  '<div style="margin-top: -55px; padding-right: 56px; display: flex; justify-content: flex-end; position: relative; z-index: 6;">',
+                  """
+                    <style>
+                    div[data-testid="column"] button[kind="secondary"] {
+                        background-color: #0052CC !important;
+                        color: white !important;
+                        border: none !important;
+                        border-radius: 6px !important;
+                        box-shadow: none !important;
+                        font-size: 0.95rem !important;
+                        padding: 0px !important;
+                        min-height: 36px !important;
+                        height: 36px !important;
+                        width: 100% !important;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    div[data-testid="column"] button[kind="secondary"]:hover {
+                        background-color: #003D99 !important;
+                    }
+                    </style>
+                    """,
                   unsafe_allow_html=True,
               )
-              if st.button(
-                  label_estrela,
-                  key=f"btn_estrela_{idx}_{row['Título do Imóvel']}",
-                  help="Favoritar imóvel",
-              ):
-                if ja_selecionado:
-                  st.session_state["imoveis_selecionados"] = [
-                      item
-                      for item in st.session_state["imoveis_selecionados"]
-                      if not (
-                          item["Título do Imóvel"] == row["Título do Imóvel"]
-                          and item["Nome do Investidor"]
-                          == row["Nome do Investidor"]
-                      )
-                  ]
-                else:
-                  st.session_state["imoveis_selecionados"].append(row.to_dict())
-                st.rerun()
-              st.markdown("</div>", unsafe_allow_html=True)
+
+              _, col_b1, col_b2 = st.columns([4.2, 0.9, 0.9])
+
+              with col_b1:
+                label_estrela = "⭐" if ja_selecionado else "☆"
+                if st.button(
+                    label_estrela,
+                    key=f"btn_estrela_{idx}_{row['Título do Imóvel']}",
+                    use_container_width=True,
+                    help="Favoritar imóvel",
+                ):
+                  if ja_selecionado:
+                    st.session_state["imoveis_selecionados"] = [
+                        item
+                        for item in st.session_state["imoveis_selecionados"]
+                        if not (
+                            item["Título do Imóvel"] == row["Título do Imóvel"]
+                            and item["Nome do Investidor"]
+                            == row["Nome do Investidor"]
+                        )
+                    ]
+                  else:
+                    st.session_state["imoveis_selecionados"].append(
+                        row.to_dict()
+                    )
+                  st.rerun()
+
+              with col_b2:
+                st.markdown(
+                    f"""
+                    <a href="{link_url}" target="_blank" title="Ver Anúncio Oficial" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: #E0E7FF; color: #3730A3; border-radius: 6px; height: 36px; font-size: 1rem; font-weight: bold; width: 100%;">
+                        🔗
+                    </a>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
               st.write("<br>", unsafe_allow_html=True)
 
         renderizar_vitrine_v25(df_paginado)
