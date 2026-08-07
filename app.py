@@ -1354,27 +1354,34 @@ else:
                   unsafe_allow_html=True,
               )
 
-              # --- EXTRAÇÃO RIGOROSA: APENAS BAIRRO E CIDADE (EXCLUINDO RUA) ---
+              # --- EXTRAÇÃO ROBUSTA: BUSCA APENAS BAIRRO E CIDADE ---
               endereco_completo = str(row["Endereço"])
               cidade_imovel = str(row["Cidade Imóvel"])
               
               partes_end = [p.strip() for p in endereco_completo.split(",")]
               bairro_encontrado = ""
               
-              # Procura especificamente por partes que contenham indicadores de bairro
+              # Varre as partes do endereço procurando por indicativos reais de bairros
               for parte in partes_end:
-                if any(termo_chave in parte.lower() for termo_chave in ["jardim", "vila", "bairro", "parque", "centro", "zona", "loteamento"]):
-                  bairro_encontrado = parte
-                  break
+                p_lower = parte.lower()
+                if any(termo_chave in p_lower for termo_chave in ["jardim", "vila", "bairro", "parque", "centro", "zona", "loteamento", "conjunto", "cidade"]):
+                  # Evita pegar a própria cidade como bairro caso ela venha repetida no meio
+                  if cidade_imovel.lower() not in p_lower:
+                    bairro_encontrado = parte
+                    break
               
-              # Se não achar por palavra-chave, pega o penúltimo elemento se houver estrutura suficiente
+              # Fallback seguro caso não ache pelas palavras-chave exatas: pega a antepenúltima parte se houver
               if not bairro_encontrado and len(partes_end) >= 3:
-                bairro_encontrado = partes_end[-3]
+                candidato = partes_end[-3]
+                if cidade_imovel.lower() not in candidato.lower():
+                  bairro_encontrado = candidato
               elif not bairro_encontrado and len(partes_end) == 2:
-                bairro_encontrado = partes_end[0]
+                candidato = partes_end[0]
+                if cidade_imovel.lower() not in candidato.lower():
+                  bairro_encontrado = candidato
 
-              # Monta o termo de pesquisa estritamente com Bairro e Cidade (sem rua)
-              if bairro_encontrado and bairro_encontrado.lower() != cidade_imovel.lower():
+              # Garante que o termo final use estritamente Bairro + Cidade (sem rua, sem número, sem CEP)
+              if bairro_encontrado:
                 termo_pesquisa = f"media valor {bairro_encontrado}, {cidade_imovel}"
               else:
                 termo_pesquisa = f"media valor {cidade_imovel}"
