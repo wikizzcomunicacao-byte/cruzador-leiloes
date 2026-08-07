@@ -1259,7 +1259,7 @@ else:
         )
 
         @st.fragment
-        def renderizar_vitrine_v23(df_cards):
+        def renderizar_vitrine_v24(df_cards):
           cols_cards = st.columns(2)
           for idx, (_, row) in enumerate(df_cards.iterrows()):
             col_target = cols_cards[idx % 2]
@@ -1333,7 +1333,7 @@ else:
                   unsafe_allow_html=True,
               )
 
-              # PAINEL EXPANSÍVEL DE ANÁLISE DE MERCADO (COM DADOS DIRETO NA TELA)
+              # PAINEL EXPANSÍVEL DE ANÁLISE DE MERCADO
               with st.expander("🔍 Ver Média de Valor da Região (Pesquisa Inteligente)"):
                 if st.button(
                     "✨ Gerar Análise de Mercado",
@@ -1353,9 +1353,8 @@ else:
                                 **Pesquisa de Mercado Realizada para:** `{row['Endereço']}, {row['Cidade Imóvel']}`
                                 
                                 * **Valor Médio de Venda na Localidade:** R$ {val_avaliacao:,.2f}
-                                * **Faixa Estimada de Mercado / m²:** R$ {v_min:,.2f} a R$ {v_max:,.2f}
+                                * **Faixa Estimada de Mercado:** R$ {v_min:,.2f} a R$ {v_max:,.2f}
                                 * **Avaliação Oficial do Leiloeiro:** R$ {row['Valor de Avaliação (R$)']:,.2f} (Condizente com o histórico da região).
-                                * **Oportunidade Atual:** Desconto de **{row['Desconto (%)']:.1f}%** em relação ao mercado.
                                 """)
 
               # BOTÕES DE AÇÃO
@@ -1412,7 +1411,7 @@ else:
 
               st.write("---")
 
-        renderizar_vitrine_v23(df_paginado)
+        renderizar_vitrine_v24(df_paginado)
 
     with tab5:
       st.write(" ")
