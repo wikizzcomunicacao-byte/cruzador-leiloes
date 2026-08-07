@@ -1278,7 +1278,7 @@ else:
         )
 
         @st.fragment
-        def renderizar_vitrine_v4(df_cards):
+        def renderizar_vitrine_v6(df_cards):
           cols_cards = st.columns(2)
           for idx, (_, row) in enumerate(df_cards.iterrows()):
             col_target = cols_cards[idx % 2]
@@ -1354,30 +1354,39 @@ else:
                   unsafe_allow_html=True,
               )
 
-              # --- PESQUISA DIRECIONADA EM PORTAIS (VIVA REAL, ZAP, OLX, QUINTOANDAR) ---
+              # --- EXTRAÇÃO PRECISA E DIRETA DO BAIRRO E DA CIDADE ---
               endereco_completo = str(row["Endereço"])
+              titulo_imovel = str(row["Título do Imóvel"])
               cidade_imovel = str(row["Cidade Imóvel"])
               
-              partes_end = [p.strip() for p in endereco_completo.split(",")]
-              bairro_limpo = ""
+              bairro_encontrado = ""
               
+              # Divide o endereço por vírgulas e procura termos comuns de bairros (Vila, Jardim, etc.)
+              partes_end = [p.strip() for p in endereco_completo.split(",")]
               for parte in partes_end:
                 p_lower = parte.lower()
-                if any(termo in p_lower for termo in ["vila", "jardim", "bairro", "parque", "centro", "loteamento", "conjunto", "residencial", "condominio", "zona"]):
-                  if cidade_imovel.lower() not in p_lower and not any(rua_termo in p_lower for rua_termo in ["rua", "av", "avenida", "estrada", "rodovia", "alameda"]):
-                    bairro_limpo = parte
+                if any(termo in p_lower for termo in ["vila ", "jardim ", "bairro ", "parque ", "centro", "loteamento", "conjunto", "residencial", "condominio", "carmosina"]):
+                  if cidade_imovel.lower() not in p_lower and not any(r in p_lower for r in ["rua", "av", "avenida", "estrada", "rodovia", "alameda"]):
+                    bairro_encontrado = parte
                     break
               
-              if not bairro_limpo and len(partes_end) >= 3:
-                candidato = partes_end[-3]
-                if cidade_imovel.lower() not in candidato.lower() and not any(rua_termo in candidato.lower() for rua_termo in ["rua", "av", "avenida", "estrada"]):
-                  bairro_limpo = candidato
+              # Se não encontrou nas vírgulas do endereço, procura no título
+              if not bairro_encontrado:
+                for match_bairro in re.finditer(r'\b(Vila|Jardim|Parque|Bairro)\s+[A-Za-zÀ-ÿ]+', titulo_imovel, re.IGNORECASE):
+                  bairro_encontrado = match_bairro.group(0)
+                  break
 
-              # Cria um termo de busca focando nos portais imobiliários líderes do mercado brasileiro
-              if bairro_limpo:
-                termo_pesquisa = f"{bairro_limpo} {cidade_imovel} (viva real OR zap imoveis OR quintoandar OR olx)"
+              # Fallback seguro: se a string tiver partes suficientes, pega a penúltima
+              if not bairro_encontrado and len(partes_end) >= 2:
+                candidato = partes_end[-2]
+                if cidade_imovel.lower() not in candidato.lower() and not any(r in candidato.lower() for r in ["rua", "av", "avenida", "sp"]):
+                  bairro_encontrado = candidato
+
+              # Monta a pesquisa direcionada unindo estritamente o Bairro e a Cidade + Portais
+              if bairro_encontrado:
+                termo_pesquisa = f"{bairro_encontrado} {cidade_imovel} (viva real OR zap imoveis OR quintoandar OR olx)"
               else:
-                termo_pesquisa = f"imoveis {cidade_imovel} (viva real OR zap imoveis OR quintoandar OR olx)"
+                termo_pesquisa = f"{cidade_imovel} (viva real OR zap imoveis OR quintoandar OR olx)"
               
               url_google_pesquisa = f"https://www.google.com/search?q={quote(termo_pesquisa)}"
               
@@ -1386,7 +1395,7 @@ else:
                   <div style="margin-top: -10px; margin-bottom: 10px;">
                       <a href="{url_google_pesquisa}" target="_blank" style="text-decoration: none;">
                           <div style="background-color: #2563EB; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                              🏢 Consultar Portais (Viva Real, Zap, QuintoAndar, OLX)
+                              🏢 Consultar Portais por Bairro e Cidade (Viva Real, Zap, QuintoAndar, OLX)
                           </div>
                       </a>
                   </div>
@@ -1448,7 +1457,7 @@ else:
               
               st.write("---")
 
-        renderizar_vitrine_v4(df_paginado)
+        renderizar_vitrine_v6(df_paginado)
 
   elif "df_final" not in st.session_state:
     st.info(
