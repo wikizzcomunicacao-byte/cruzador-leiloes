@@ -351,7 +351,7 @@ else:
             "disponíveis em leilão. Esta é uma oportunidade única para adquirir "
             "bens com preços atrativos e grande potencial de valorização!\n\n"
             "Confira adiante algumas das propriedades em destaque, de "
-            "acordo com as regiões selecionadas por você."
+            "acordo com las regiões selecionadas por você."
         ),
     )
     pdf.ln(15)
@@ -1291,7 +1291,7 @@ else:
 
               label_estrela = "⭐" if ja_selecionado else "☆"
 
-              # Renderização unificada do card com a tag HTML completa contendo o link embutido
+              # Renderização unificada do card com link e botão estruturados perfeitamente
               st.markdown(
                   f"""
                     <div class="property-card">
@@ -1306,7 +1306,6 @@ else:
                         </div>
                         <p style="font-size: 0.85rem; color: #475569; margin-bottom: 0;"><b>Endereço:</b> {row['Endereço']}</p>
                         
-                        <!-- Botão de link posicionado absolutamente DENTRO do card no canto inferior direito -->
                         <div style="position: absolute; bottom: 12px; right: 15px; display: flex; gap: 6px; z-index: 5;">
                             <a href="{link_url}" target="_blank" title="Ver Anúncio Oficial" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: #E0E7FF; color: #3730A3; border-radius: 6px; width: 34px; height: 34px; font-size: 1rem; font-weight: bold;">
                                 🔗
@@ -1317,11 +1316,8 @@ else:
                   unsafe_allow_html=True,
               )
 
-              # Posicionamento absoluto perfeito para o botão da estrela ficar perfeitamente alinhado ao lado do link dentro do card
               st.markdown(
-                  f"""
-                    <div style="margin-top: -55px; padding-right: 56px; display: flex; justify-content: flex-end; position: relative; z-index: 6;">
-                    """,
+                  '<div style="margin-top: -55px; padding-right: 56px; display: flex; justify-content: flex-end; position: relative; z-index: 6;">',
                   unsafe_allow_html=True,
               )
               if st.button(
