@@ -665,7 +665,7 @@ else:
   with col_head1:
     st.title("🎯 Cruzador Automático de Leilões")
     st.markdown(
-        "Cruzamento inteligente entre o perfil des investidores e as"
+        "Cruzamento inteligente entre o perfil dos investidores e as"
         " oportunidades em leilão."
     )
 
@@ -1331,10 +1331,7 @@ else:
                   for item in st.session_state["imoveis_selecionados"]
               )
 
-              termo_pesquisa = f"media valor {row['Endereço']} {row['Cidade Imóvel']}"
-              url_google_pesquisa = f"https://www.google.com/search?q={quote(termo_pesquisa)}"
-
-              # Card unificado com o botão de pesquisa incorporado perfeitamente dentro da moldura
+              # Card unificado com todas as informações limpas
               st.markdown(
                   f"""
                             <div class="property-card">
@@ -1352,18 +1349,29 @@ else:
                                     - Faixa de Leilões na Cidade: <b>{faixa_bairro_calc}</b>
                                 </div>
                                 <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px;"><b>Endereço:</b> {row['Endereço']}</p>
-                                
-                                <a href="{url_google_pesquisa}" target="_blank" style="text-decoration: none;">
-                                    <button style="background-color: #475569; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 4px; font-size: 0.85rem;">
-                                        📊 Consultar Média de Mercado no Google (Bairro/Região)
-                                    </button>
-                                </a>
                             </div>
                             """,
                   unsafe_allow_html=True,
               )
 
-              # Botões de Ação alinhados logo abaixo do card
+              # Botão perfeitamente formatado para consulta de mercado no Google sob demanda
+              termo_pesquisa = f"media valor {row['Endereço']} {row['Cidade Imóvel']}"
+              url_google_pesquisa = f"https://www.google.com/search?q={quote(termo_pesquisa)}"
+              
+              st.markdown(
+                  f"""
+                  <div style="margin-top: -10px; margin-bottom: 10px;">
+                      <a href="{url_google_pesquisa}" target="_blank" style="text-decoration: none;">
+                          <div style="background-color: #475569; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                              📊 Consultar Média de Mercado no Google (Bairro/Região)
+                          </div>
+                      </a>
+                  </div>
+                  """,
+                  unsafe_allow_html=True,
+              )
+
+              # Botões de Ação (Escolher, Anúncio, WhatsApp)
               b_col1, b_col2, b_col3 = st.columns(3)
               with b_col1:
                 if st.button(
@@ -1415,7 +1423,7 @@ else:
                     unsafe_allow_html=True,
                 )
               
-              st.write(" ")
+              st.write("---")
 
         renderizar_vitrine(df_paginado)
 
