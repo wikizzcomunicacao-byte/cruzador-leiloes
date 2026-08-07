@@ -1,10 +1,11 @@
+import streamlit as st
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+import os
 
-def gerar_informativo_lcr(nome_arquivo="informativo_lcr_completo.pdf", lista_imoveis=None):
-    # Configuração da página (tamanho Carta, margens reduzidas para otimizar o layout)
+def gerar_informativo_lcr(nome_arquivo="informativo_imoveis_lcr.pdf", lista_imoveis=None):
     doc = SimpleDocTemplate(
         nome_arquivo,
         pagesize=letter,
@@ -15,7 +16,6 @@ def gerar_informativo_lcr(nome_arquivo="informativo_lcr_completo.pdf", lista_imo
     story = []
     styles = getSampleStyleSheet()
     
-    # Estilos personalizados alinhados ao padrão visual LCR
     estilo_titulo = ParagraphStyle(
         'TituloLCR',
         parent=styles['Heading1'],
@@ -47,7 +47,7 @@ def gerar_informativo_lcr(nome_arquivo="informativo_lcr_completo.pdf", lista_imo
         lista_imoveis = []
 
     for idx, imovel in enumerate(lista_imoveis):
-        # 1. Cabeçalho Fixo com o Logotipo / Nome da Empresa
+        # Cabeçalho Fixo LCR
         tabela_topo = Table([
             [Paragraph("<b>LCR</b>", estilo_titulo), Paragraph("<b>LOURENÇO COLOMBO E ROZANI</b><br/><font size=7 color='#666666'>ADVOCACIA E LEILÕES IMOBILIÁRIOS</font>", estilo_texto)]
         ], colWidths=[50, 490])
@@ -59,8 +59,7 @@ def gerar_informativo_lcr(nome_arquivo="informativo_lcr_completo.pdf", lista_imo
         story.append(tabela_topo)
         story.append(Spacer(1, 8))
         
-        # 2. Espaço Reservado para a Foto do Imóvel (Simulando o bloco da foto)
-        # Nota: Aqui você pode substituir por um objeto Image do ReportLab apontando para o arquivo da foto.
+        # Bloco da Foto
         tabela_foto = Table([[Paragraph(f"<font color='#888888'><b>[FOTO DO IMÓVEL: {imovel.get('titulo', '')}]</b></font>", ParagraphStyle('Center', alignment=1))]], colWidths=[540], rowHeights=[140])
         tabela_foto.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#ecf0f1')),
@@ -72,11 +71,11 @@ def gerar_informativo_lcr(nome_arquivo="informativo_lcr_completo.pdf", lista_imo
         story.append(tabela_foto)
         story.append(Spacer(1, 10))
         
-        # 3. Título do Imóvel (Número e Nome)
+        # Título
         story.append(Paragraph(f"<b>{imovel.get('numero', '01')}. {imovel.get('titulo', 'IMÓVEL')}</b>", estilo_titulo))
         story.append(Spacer(1, 4))
         
-        # 4. Dados Estruturados em Duas Colunas
+        # Dados em colunas
         dados_tabela = [
             [Paragraph(f"<b>Matrícula:</b> {imovel.get('matricula', '-')}", estilo_texto), Paragraph(f"<b>Área do Terreno:</b> {imovel.get('terreno', '-')}", estilo_texto)],
             [Paragraph(f"<b>Quartos:</b> {imovel.get('quartos', '-')}", estilo_texto), Paragraph(f"<b>Área Construída:</b> {imovel.get('construida', '-')}", estilo_texto)],
@@ -93,22 +92,23 @@ def gerar_informativo_lcr(nome_arquivo="informativo_lcr_completo.pdf", lista_imo
         story.append(tabela_dados)
         story.append(Spacer(1, 6))
         
-        # 5. Informações Complementares (Datas, Observações, Endereço e Link)
+        # Detalhes finais
         story.append(Paragraph(f"<b>Data do Leilão:</b> {imovel.get('data', '-')}", estilo_texto))
         if imovel.get('obs'):
             story.append(Paragraph(f"<b>OBS:</b> {imovel.get('obs')}", estilo_texto))
         story.append(Paragraph(f"<b>Endereço:</b> {imovel.get('endereco', '-')}", estilo_texto))
         story.append(Paragraph(f"<b>Acesse o Link:</b> <font color='blue'><u>{imovel.get('link', 'Clique aqui')}</u></font>", estilo_texto))
         
-        # Quebra de página automática para o próximo imóvel (mantendo o padrão de 1 imóvel por página)
         if idx < len(lista_imoveis) - 1:
             story.append(PageBreak())
 
     doc.build(story)
-    print("Informativo gerado com sucesso!")
 
-# Exemplo de massa de dados aplicando alguns dos imóveis que selecionamos:
-if __name__ == "__main__":
+# Interface do Streamlit
+st.title("Gerador de Informativo de Imóveis - LCR")
+st.write("Clique no botão abaixo para gerar o PDF formatado com o layout padrão.")
+
+if st.button("Gerar e Baixar Informativo PDF"):
     imoveis_exemplo = [
         {
             "numero": "02",
@@ -125,27 +125,19 @@ if __name__ == "__main__":
             "data": "03/09/2025 e 10/09/2025",
             "pagamento": "À vista",
             "obs": "Permite utilização de FGTS",
-            "endereco": "R. Alessandra Bersi, 285, LT 26 - QD 16, Alphaville Mirassol, Mirassol/SP, CEP: 15134-180",
-            "link": "https://www.caixa.gov.br"
-        },
-        {
-            "numero": "03",
-            "titulo": "PARQUE DA LIBERDADE VI",
-            "matricula": "142.754",
-            "quartos": "02",
-            "vagas": "02",
-            "terreno": "100,00 m²",
-            "construida": "51,05 m²",
-            "avaliacao": "R$ 230.000,00",
-            "lance_min": "R$ 138.000,00",
-            "instituicao": "Caixa",
-            "modalidade": "SFI - Edital Único",
-            "data": "13/10/2025 e 20/10/2025",
-            "pagamento": "À vista",
-            "obs": "Permite utilização de FGTS",
-            "endereco": "Avenida José da Silva Sé, 505, Casa 47 - Qd. A, Parque da Liberdade VI, São José do Rio Preto/SP, CEP: 15056-750",
+            "endereco": "R. Alessandra Bersi, 285, LT 26 - QD 16, Alphaville Mirassol, Mirassol/SP",
             "link": "https://www.caixa.gov.br"
         }
     ]
     
-    gerar_informativo_lcr("informativo_imoveis_lcr.pdf", imoveis_exemplo)
+    arquivo_pdf = "informativo_imoveis_lcr.pdf"
+    gerar_informativo_lcr(arquivo_pdf, imoveis_exemplo)
+    
+    with open(arquivo_pdf, "rb") as pdf_file:
+        PDFbyte = pdf_file.read()
+        
+    st.download_button(label="📥 Baixar PDF Gerado",
+                        data=PDFbyte,
+                        file_name=arquivo_pdf,
+                        mime='application/octet-stream')
+    st.success("PDF gerado com sucesso!")
