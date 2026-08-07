@@ -3,6 +3,7 @@ import io
 import re
 from urllib.parse import quote
 from fpdf import FPDF
+from google import genai
 import numpy as np
 import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill
@@ -10,6 +11,11 @@ from openpyxl.utils import get_column_letter
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+
+# ---------------------------------------------------------
+# CONFIGURAÇÃO DO CLIENTE GEMINI COM SUA CHAVE
+# ---------------------------------------------------------
+client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
 # ---------------------------------------------------------
 # 1. CONFIGURAÇÃO DA PÁGINA
@@ -1278,7 +1284,7 @@ else:
         )
 
         @st.fragment
-        def renderizar_vitrine_v12(df_cards):
+        def renderizar_vitrine_v13(df_cards):
           cols_cards = st.columns(2)
           for idx, (_, row) in enumerate(df_cards.iterrows()):
             col_target = cols_cards[idx % 2]
@@ -1354,54 +1360,37 @@ else:
                   unsafe_allow_html=True,
               )
 
-              # --- EXTRAÇÃO DO BAIRRO E MONTAGEM DA PERGUNTA PARA A IA ---
-              endereco_completo = str(row["Endereço"])
-              titulo_imovel = str(row["Título do Imóvel"])
-              cidade_imovel = str(row["Cidade Imóvel"])
-              tipo_bem = str(row["Tipo de Bem"])
-              valor_avaliacao = row["Valor de Avaliação (R$)"]
-              
-              bairro_encontrado = ""
-              partes_end = [p.strip() for p in endereco_completo.split(",")]
-              for parte in partes_end:
-                p_lower = parte.lower()
-                if any(termo in p_lower for termo in ["vila", "jardim", "bairro", "parque", "centro", "loteamento", "conjunto", "residencial", "condominio", "carmosina", "brooklin"]):
-                  if cidade_imovel.lower() not in p_lower and not any(r in p_lower for r in ["rua", "av", "avenida", "estrada", "rodovia", "alameda"]):
-                    bairro_encontrado = parte
-                    break
-              
-              if not bairro_encontrado:
-                for match_bairro in re.finditer(r'\b(Vila|Jardim|Parque|Bairro|Brooklin)\s+[A-Za-zÀ-ÿ]+', titulo_imovel, re.IGNORECASE):
-                  bairro_encontrado = match_bairro.group(0)
-                  break
+              # --- ANÁLISE AUTOMÁTICA VIA GEMINI API SDK NOVO ---
+              with st.expander("🤖 Análise de Mercado por IA (Gemini)"):
+                if st.button(
+                    "✨ Gerar Análise da Região",
+                    key=f"btn_ia_{idx}_{row['Título do Imóvel'][:15]}",
+                ):
+                  with st.spinner("Consultando inteligência de mercado..."):
+                    try:
+                      endereco_completo = str(row["Endereço"])
+                      titulo_imovel = str(row["Título do Imóvel"])
+                      cidade_imovel = str(row["Cidade Imóvel"])
+                      tipo_bem = str(row["Tipo de Bem"])
+                      valor_avaliacao = row["Valor de Avaliação (R$)"]
 
-              if not bairro_encontrado and len(partes_end) >= 2:
-                candidato = partes_end[-2]
-                if cidade_imovel.lower() not in candidato.lower() and not any(r in candidato.lower() for r in ["rua", "av", "avenida", "sp"]):
-                  bairro_encontrado = candidato
+                      prompt_ia = (
+                          f"Aja como um especialista imobiliário sênior. Analise o seguinte imóvel de leilão:\n"
+                          f"- Tipo: {tipo_bem}\n"
+                          f"- Título: {titulo_imovel}\n"
+                          f"- Endereço: {endereco_completo}, {cidade_imovel}\n"
+                          f"- Valor de Avaliação do Leiloeiro: R$ {valor_avaliacao:,.2f}\n\n"
+                          f"Forneça uma estimativa rápida de mercado, avaliando se o valor de avaliação parece condizente e qual o potencial da região."
+                      )
 
-              local_texto = f"{bairro_encontrado}, {cidade_imovel}" if bairro_encontrado else cidade_imovel
-              pergunta_ia = f"Qual é o valor médio de mercado por metro quadrado e o preço médio de um(a) {tipo_bem} no bairro {local_texto}? O imóvel tem valor de avaliação de R$ {valor_avaliacao:,.2f}. A avaliação está condizente com o mercado atual?"
-              
-              # Widget nativo de texto copiável e botão para abrir o Gemini
-              st.text_input(
-                  "📋 Pergunta pronta para a IA (Copie abaixo):",
-                  value=pergunta_ia,
-                  key=f"txt_ia_{idx}_{row['Título do Imóvel'][:15]}"
-              )
-              
-              st.markdown(
-                  f"""
-                  <div style="margin-top: -5px; margin-bottom: 10px;">
-                      <a href="https://gemini.google.com/app" target="_blank" style="text-decoration: none;">
-                          <div style="background-color: #8B5CF6; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                              🤖 Abrir Gemini (Cole com Ctrl+V)
-                          </div>
-                      </a>
-                  </div>
-                  """,
-                  unsafe_allow_html=True,
-              )
+                      response = client.models.generate_content(
+                          model="gemini-2.5-flash",
+                          contents=prompt_ia,
+                      )
+                      st.success("Análise Concluída:")
+                      st.markdown(response.text)
+                    except Exception as e:
+                      st.error(f"Erro ao consultar a IA: {e}")
 
               # Botões de Ação (Escolher, Anúncio, WhatsApp)
               b_col1, b_col2, b_col3 = st.columns(3)
@@ -1457,7 +1446,7 @@ else:
               
               st.write("---")
 
-        renderizar_vitrine_v12(df_paginado)
+        renderizar_vitrine_v13(df_paginado)
 
   elif "df_final" not in st.session_state:
     st.info(
