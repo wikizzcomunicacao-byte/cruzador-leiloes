@@ -1289,7 +1289,6 @@ else:
 
             with col_target:
               with st.container():
-                # Estilização customizada para compactar o botão do Streamlit transformando-o em uma estrela minimalista no canto superior direito
                 st.markdown(
                     """
                     <style>
@@ -1301,41 +1300,18 @@ else:
                         padding: 0px !important;
                         min-height: unset !important;
                         line-height: 1 !important;
-                        float: right;
                     }
                     </style>
                     """,
                     unsafe_allow_html=True,
                 )
 
-                c_top1, c_top2 = st.columns([5, 1])
-                with c_top1:
-                  st.markdown(badge_html, unsafe_allow_html=True)
-                with c_top2:
-                  label_estrela = "⭐" if ja_selecionado else "☆"
-                  if st.button(
-                      label_estrela,
-                      key=f"btn_estrela_{idx}_{row['Título do Imóvel']}",
-                  ):
-                    if ja_selecionado:
-                      st.session_state["imoveis_selecionados"] = [
-                          item
-                          for item in st.session_state["imoveis_selecionados"]
-                          if not (
-                              item["Título do Imóvel"] == row["Título do Imóvel"]
-                              and item["Nome do Investidor"]
-                              == row["Nome do Investidor"]
-                          )
-                      ]
-                    else:
-                      st.session_state["imoveis_selecionados"].append(
-                          row.to_dict()
-                      )
-                    st.rerun()
+                # Mantém a badge à esquerda no topo do card
+                st.markdown(badge_html, unsafe_allow_html=True)
 
                 st.markdown(
                     f"""
-                    <div class="property-card" style="margin-top: -10px;">
+                    <div class="property-card">
                         <h4 style="margin-top: 4px; margin-bottom: 4px; color: #1E293B;">{row['Título do Imóvel']}</h4>
                         <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']}</p>
                         <div style="margin-bottom: 8px;">
@@ -1347,14 +1323,44 @@ else:
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
                             <p style="font-size: 0.85rem; color: #475569; margin-bottom: 0;"><b>Endereço:</b> {row['Endereço']}</p>
-                            <a href="{link_url}" target="_blank" title="Ver Anúncio Oficial" style="text-decoration: none; font-size: 1.3rem; background: #E0E7FF; padding: 4px 10px; border-radius: 8px;">
-                                🔗
-                            </a>
                         </div>
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
+
+              # Parte inferior direita: Link e Estrela lado a lado
+              r_col1, r_col2 = st.columns([1, 1])
+              with r_col1:
+                st.markdown(
+                    f"""
+                    <a href="{link_url}" target="_blank" title="Ver Anúncio Oficial" style="text-decoration: none; font-size: 1.3rem; background: #E0E7FF; padding: 4px 10px; border-radius: 8px; display: inline-block;">
+                        🔗
+                    </a>
+                    """,
+                    unsafe_allow_html=True,
+                )
+              with r_col2:
+                label_estrela = "⭐" if ja_selecionado else "☆"
+                if st.button(
+                    label_estrela,
+                    key=f"btn_estrela_{idx}_{row['Título do Imóvel']}",
+                ):
+                  if ja_selecionado:
+                    st.session_state["imoveis_selecionados"] = [
+                        item
+                        for item in st.session_state["imoveis_selecionados"]
+                        if not (
+                            item["Título do Imóvel"] == row["Título do Imóvel"]
+                            and item["Nome do Investidor"]
+                            == row["Nome do Investidor"]
+                        )
+                    ]
+                  else:
+                    st.session_state["imoveis_selecionados"].append(
+                        row.to_dict()
+                    )
+                  st.rerun()
 
               st.write(" ")
 
