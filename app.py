@@ -294,41 +294,6 @@ else:
     return list(res)
 
 
-  # Módulo de Inteligência de Mercado por Bairro (Adicionado para os Cards)
-  def calcular_faixa_bairro(bairro_imovel, cidade_imovel, df_global):
-    """Calcula dinamicamente a faixa de preço (R$ X a R$ Y) e média de m² do bairro com base nos dados carregados."""
-    sub_bairro = df_global[
-        df_global["Cidade Imóvel"].apply(normalize)
-        == normalize(cidade_imovel)
-    ]
-    if sub_bairro.empty:
-      return "R$ 150.000 a R$ 500.000", "R$ 2.500,00/m²"
-
-    precos = sub_bairro["Preço do Leilão (R$)"].dropna()
-    if precos.empty:
-      return "R$ 150.000 a R$ 500.000", "R$ 2.500,00/m²"
-
-    p_min = precos.min()
-    p_max = precos.max()
-
-    # Média simulada ou calculada de m² se houver área
-    media_m2 = "R$ 2.300,00/m²"
-    if "Área do Terreno" in sub_bairro.columns:
-      areas = pd.to_numeric(sub_bairro["Área do Terreno"], errors="coerce")
-      validas = (precos > 0) & (areas > 0)
-      if validas.any():
-        m2_calc = (precos[validas] / areas[validas]).mean()
-        media_m2 = f"R$ {m2_calc:,.2f}/m²".replace(",", "X").replace(".", ",").replace("X", ".")
-
-    faixa_str = (
-        f"R$ {p_min:,.0f} a R$ {p_max:,.0f}"
-        .replace(",", "X")
-        .replace(".", ",")
-        .replace("X", ".")
-    )
-    return faixa_str, media_m2
-
-
   class InformativoLeiloesPDF(FPDF):
 
     def header(self):
@@ -1286,6 +1251,32 @@ else:
 
         st.write(" ")
 
+        # Configuração da Paginação de 10 em 10 cards
+        itens_por_pagina = 10
+        total_imoveis = len(df_inv)
+        total_pages = (
+            (total_imoveis + itens_por_pagina - 1) // itens_por_pagina
+            if total_imoveis > 0
+            else 1
+        )
+
+        if total_pages > 1:
+          pagina_atual = st.number_input(
+              "📄 Página de Cards", min_value=1, max_value=total_pages, step=1
+          )
+        else:
+          pagina_atual = 1
+
+        start_idx = (pagina_atual - 1) * itens_por_pagina
+        end_idx = start_idx + itens_por_pagina
+        df_paginado = df_inv.iloc[start_idx:end_idx]
+
+        st.caption(
+            f"Mostrando imóveis {start_idx + 1} a"
+            f" {min(end_idx, total_imoveis)} de {total_imoveis} para este"
+            " investidor."
+        )
+
         @st.fragment
         def renderizar_vitrine(df_cards):
           cols_cards = st.columns(2)
@@ -1294,17 +1285,28 @@ else:
 
             badge_html = f'<span class="badge-type">🏠 {row["Tipo de Bem"]}</span>'
 
-            # Calcula faixa de mercado do bairro para exibir no card
-            faixa_bairro_calc, media_m2_calc = calcular_faixa_bairro(
-                row["Endereço"], row["Cidade Imóvel"], df_filtered
-            )
-            multiplo_m2 = (
-                row["Preço do Leilão (R$)"] / float(row["Área do Terreno"])
-                if "Área do Terreno" in row
-                and pd.notnull(row["Área do Terreno"])
-                and float(row["Área do Terreno"]) > 0
-                else 0
-            )
+            # Correção do cálculo da faixa (ignorando valores zerados e nulos da mesma cidade)
+            cidade_alvo = row["Cidade Imóvel"]
+            sub_cidade = df_filtered[
+                df_filtered["Cidade Imóvel"] == cidade_alvo
+            ]["Preço do Leilão (R$)"]
+            sub_cidade_valida = sub_cidade[
+                (sub_cidade > 1000) & (sub_cidade.notnull())
+            ]
+
+            if not sub_cidade_valida.empty:
+              p_min = sub_cidade_valida.min()
+              p_max = sub_cidade_valida.max()
+              faixa_bairro_calc = (
+                  f"R$ {p_min:,.0f} a R$ {p_max:,.0f}"
+                  .replace(",", "X")
+                  .replace(".", ",")
+                  .replace("X", ".")
+              )
+            else:
+              faixa_bairro_calc = "Sob Consulta"
+
+            media_m2_calc = "Base de Leilão Local"
 
             msg_wsp = (
                 f"Olá {investidor_sel}! Selecionei uma oportunidade excelente"
@@ -1344,9 +1346,9 @@ else:
                                 </div>
                                 <hr style="border: 0.5px solid #E2E8F0; margin: 8px 0;">
                                 <div style="font-size: 0.85rem; color: #334155; margin-bottom: 8px;">
-                                    📊 <b>Inteligência de Mercado (Bairro):</b><br>
-                                    - Faixa da Região: <b>{faixa_bairro_calc}</b><br>
-                                    - Média M² do Bairro: <b>{media_m2_calc}</b>
+                                    📊 <b>Inteligência de Mercado (Região):</b><br>
+                                    - Faixa de Leilões na Cidade: <b>{faixa_bairro_calc}</b><br>
+                                    - Referência: <b>{media_m2_calc}</b>
                                 </div>
                                 <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px;"><b>Endereço:</b> {row['Endereço']}</p>
                             </div>
@@ -1399,7 +1401,7 @@ else:
                     unsafe_allow_html=True,
                 )
 
-        renderizar_vitrine(df_inv)
+        renderizar_vitrine(df_paginado)
 
   elif "df_final" not in st.session_state:
     st.info(
