@@ -146,17 +146,22 @@ else:
         .property-card {
             background-color: #FFFFFF;
             border: 1px solid #E2E8F0;
-            border-radius: 12px;
+            border-radius: 12px 12px 0 0;
             padding: 1.2rem;
-            padding-bottom: 3.5rem; /* Espaço interno embaixo para os botões absolutos */
-            margin-bottom: 1rem;
+            margin-bottom: 0px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            position: relative; /* Essencial para conter os elementos absolutos */
         }
-        .property-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+        .property-actions-bar {
+            background-color: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-top: none;
+            border-radius: 0 0 12px 12px;
+            padding: 8px 12px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.04);
         }
         .badge-type {
             background-color: #E0E7FF;
@@ -1291,37 +1296,9 @@ else:
             with col_target:
               st.markdown(badge_html, unsafe_allow_html=True)
 
-              with st.container():
-                st.markdown(
-                    """
-                    <style>
-                    div[data-testid="column"] button[kind="secondary"] {
-                        background-color: #0052CC !important;
-                        color: white !important;
-                        border: none !important;
-                        border-radius: 6px !important;
-                        box-shadow: none !important;
-                        font-size: 0.9rem !important;
-                        padding: 0px !important;
-                        min-height: 32px !important;
-                        height: 32px !important;
-                        width: 100% !important;
-                        line-height: 1 !important;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                    }
-                    div[data-testid="column"] button[kind="secondary"]:hover {
-                        background-color: #003D99 !important;
-                    }
-                    </style>
-                    """,
-                    unsafe_allow_html=True,
-                )
-
-                # Container principal do card e botões posicionados absolutamente no canto inferior direito
-                st.markdown(
-                    f"""
+              # Parte Superior do Card
+              st.markdown(
+                  f"""
                     <div class="property-card">
                         <h4 style="margin-top: 4px; margin-bottom: 4px; color: #1E293B;">{row['Título do Imóvel']}</h4>
                         <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']}</p>
@@ -1333,17 +1310,43 @@ else:
                             <span class="price-costs">🛠️ Custo Total Estimado: R$ {row['Custo Total Estimado (R$)']:,.2f}</span>
                         </div>
                         <p style="font-size: 0.85rem; color: #475569; margin-bottom: 0;"><b>Endereço:</b> {row['Endereço']}</p>
+                    </div>
                     """,
-                    unsafe_allow_html=True,
-                )
-
-              # Linha interna com position absolute alinhada embaixo e à direita do card
-              st.markdown(
-                  '<div style="position: absolute; bottom: 12px; right: 15px; width: 90px; display: flex; gap: 6px; z-index: 5;">',
                   unsafe_allow_html=True,
               )
-              b_col1, b_col2 = st.columns(2)
-              with b_col1:
+
+              # Barra Inferior acoplada com os botões compactos alinhados à direita
+              st.markdown(
+                  """
+                    <style>
+                    div[data-testid="column"] button[kind="secondary"] {
+                        background-color: #0052CC !important;
+                        color: white !important;
+                        border: none !important;
+                        border-radius: 6px !important;
+                        box-shadow: none !important;
+                        font-size: 0.95rem !important;
+                        padding: 0px !important;
+                        min-height: 34px !important;
+                        height: 34px !important;
+                        width: 100% !important;
+                        line-height: 1 !important;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    div[data-testid="column"] button[kind="secondary"]:hover {
+                        background-color: #003D99 !important;
+                    }
+                    </style>
+                    """,
+                  unsafe_allow_html=True,
+              )
+
+              # Usamos colunas internas empurradas para a direita para alinhar perfeitamente
+              _, col_btn1, col_btn2 = st.columns([4, 1, 1])
+
+              with col_btn1:
                 label_estrela = "⭐" if ja_selecionado else "☆"
                 if st.button(
                     label_estrela,
@@ -1366,17 +1369,22 @@ else:
                     )
                   st.rerun()
 
-              with b_col2:
+              with col_btn2:
                 st.markdown(
                     f"""
-                    <a href="{link_url}" target="_blank" title="Ver Anúncio Oficial" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: #E0E7FF; color: #3730A3; border-radius: 6px; height: 32px; font-size: 0.95rem; font-weight: bold; width: 100%;">
+                    <a href="{link_url}" target="_blank" title="Ver Anúncio Oficial" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: #E0E7FF; color: #3730A3; border-radius: 6px; height: 34px; font-size: 1rem; font-weight: bold; width: 100%;">
                         🔗
                     </a>
                     """,
                     unsafe_allow_html=True,
                 )
-              st.markdown("</div></div>", unsafe_allow_html=True)
-              st.write(" ")
+
+              # Fechamento visual da barra inferior unificada ao card
+              st.markdown(
+                  '<div class="property-actions-bar" style="margin-top: -55px; opacity: 0; pointer-events: none; height: 10px;"></div>',
+                  unsafe_allow_html=True,
+              )
+              st.write("<br>", unsafe_allow_html=True)
 
         renderizar_vitrine_v25(df_paginado)
 
