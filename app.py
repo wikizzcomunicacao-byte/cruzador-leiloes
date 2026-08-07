@@ -1306,8 +1306,6 @@ else:
             else:
               faixa_bairro_calc = "Sob Consulta"
 
-            media_m2_calc = "Base de Leilão Local"
-
             msg_wsp = (
                 f"Olá {investidor_sel}! Selecionei uma oportunidade excelente"
                 f" para você:\n\n"
@@ -1347,8 +1345,7 @@ else:
                                 <hr style="border: 0.5px solid #E2E8F0; margin: 8px 0;">
                                 <div style="font-size: 0.85rem; color: #334155; margin-bottom: 8px;">
                                     📊 <b>Inteligência de Mercado (Região):</b><br>
-                                    - Faixa de Leilões na Cidade: <b>{faixa_bairro_calc}</b><br>
-                                    - Referência: <b>{media_m2_calc}</b>
+                                    - Faixa de Leilões na Cidade: <b>{faixa_bairro_calc}</b>
                                 </div>
                                 <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px;"><b>Endereço:</b> {row['Endereço']}</p>
                             </div>
@@ -1356,15 +1353,16 @@ else:
                   unsafe_allow_html=True,
               )
 
-              b_col1, b_col2 = st.columns(2)
+              b_col1, b_col2, b_col3 = st.columns(3)
               with b_col1:
                 if st.button(
                     (
-                        "⭐ Remover dos Escolhidos"
+                        "⭐ Remover"
                         if ja_selecionado
-                        else "⭐ Escolher Imóvel"
+                        else "⭐ Escolher"
                     ),
                     key=f"btn_sel_{idx}_{row['Título do Imóvel']}",
+                    use_container_width=True
                 ):
                   if ja_selecionado:
                     st.session_state["imoveis_selecionados"] = [
@@ -1385,21 +1383,42 @@ else:
               with b_col2:
                 st.markdown(
                     f"""
-                                <div style="display: flex; gap: 8px;">
-                                    <a href="{link_url}" target="_blank" style="text-decoration: none; flex: 1;">
-                                        <button style="background-color: #0052CC; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%;">
-                                            🔗 Ver Anúncio
-                                        </button>
-                                    </a>
-                                    <a href="{url_wsp}" target="_blank" style="text-decoration: none; flex: 1;">
-                                        <button style="background-color: #25D366; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%;">
-                                            📲 WhatsApp
-                                        </button>
-                                    </a>
-                                </div>
-                                """,
+                    <a href="{link_url}" target="_blank" style="text-decoration: none;">
+                        <button style="background-color: #0052CC; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 0.8rem;">
+                            🔗 Anúncio
+                        </button>
+                    </a>
+                    """,
                     unsafe_allow_html=True,
                 )
+
+              with b_col3:
+                st.markdown(
+                    f"""
+                    <a href="{url_wsp}" target="_blank" style="text-decoration: none;">
+                        <button style="background-color: #25D366; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 0.8rem;">
+                            📲 WhatsApp
+                        </button>
+                    </a>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+            # Botão individual de Análise de Mercado no Google sob demanda
+            termo_pesquisa = f"media valor {row['Endereço']} {row['Cidade Imóvel']}"
+            url_google_pesquisa = f"https://www.google.com/search?q={quote(termo_pesquisa)}"
+            
+            st.markdown(
+                f"""
+                <a href="{url_google_pesquisa}" target="_blank" style="text-decoration: none;">
+                    <button style="background-color: #475569; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 6px; font-size: 0.85rem;">
+                        📊 Consultar Média de Mercado no Google (Bairro/Região)
+                    </button>
+                </a>
+                <br><br>
+                """,
+                unsafe_allow_html=True,
+            )
 
         renderizar_vitrine(df_paginado)
 
