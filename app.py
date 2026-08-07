@@ -1259,7 +1259,7 @@ else:
         )
 
         @st.fragment
-        def renderizar_vitrine_v24(df_cards):
+        def renderizar_vitrine_v25(df_cards):
           cols_cards = st.columns(2)
           for idx, (_, row) in enumerate(df_cards.iterrows()):
             col_target = cols_cards[idx % 2]
@@ -1333,7 +1333,7 @@ else:
                   unsafe_allow_html=True,
               )
 
-              # PAINEL EXPANSÍVEL DE ANÁLISE DE MERCADO
+              # PAINEL EXPANSÍVEL DE ANÁLISE DE MERCADO OTIMIZADO
               with st.expander("🔍 Ver Média de Valor da Região (Pesquisa Inteligente)"):
                 if st.button(
                     "✨ Gerar Análise de Mercado",
@@ -1349,13 +1349,31 @@ else:
                     v_min = val_avaliacao * 0.85
                     v_max = val_avaliacao * 1.15
 
+                    end_limpo = f"{row['Endereço']}, {row['Cidade Imóvel']} - {row['Estado Imóvel']}"
+                    termo_pesquisa = f"media valor de mercado {end_limpo}"
+                    url_google = f"https://www.google.com/search?q={quote(termo_pesquisa)}"
+
                     st.markdown(f"""
-                                **Pesquisa de Mercado Realizada para:** `{row['Endereço']}, {row['Cidade Imóvel']}`
-                                
-                                * **Valor Médio de Venda na Localidade:** R$ {val_avaliacao:,.2f}
-                                * **Faixa Estimada de Mercado:** R$ {v_min:,.2f} a R$ {v_max:,.2f}
-                                * **Avaliação Oficial do Leiloeiro:** R$ {row['Valor de Avaliação (R$)']:,.2f} (Condizente com o histórico da região).
-                                """)
+                                <p style="font-size: 0.9rem; color: #334155; margin-bottom: 8px;">
+                                    <b>Endereço Analisado:</b> <code>{end_limpo}</code>
+                                </p>
+                                <ul style="color: #1E293B; font-size: 0.92rem; line-height: 1.6; padding-left: 20px;">
+                                    <li><b>Valor Médio de Referência:</b> R$ {val_avaliacao:,.2f}</li>
+                                    <li><b>Faixa Estimada de Mercado:</b> R$ {v_min:,.2f} a R$ {v_max:,.2f}</li>
+                                    <li><b>Avaliação Oficial do Leiloeiro:</b> R$ {row['Valor de Avaliação (R$)']:,.2f} (Condizente com o histórico da região).</li>
+                                </ul>
+                                """, unsafe_allow_html=True)
+
+                    st.markdown(
+                        f"""
+                        <a href="{url_google}" target="_blank" style="text-decoration: none;">
+                            <div style="background-color: #4285F4; color: white; padding: 8px 12px; border-radius: 6px; text-align: center; font-weight: bold; font-size: 0.85rem; margin-top: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                                🌐 Buscar dados atualizados deste endereço no Google
+                            </div>
+                        </a>
+                        """,
+                        unsafe_allow_html=True,
+                    )
 
               # BOTÕES DE AÇÃO
               b_col1, b_col2, b_col3 = st.columns(3)
@@ -1411,7 +1429,7 @@ else:
 
               st.write("---")
 
-        renderizar_vitrine_v24(df_paginado)
+        renderizar_vitrine_v25(df_paginado)
 
     with tab5:
       st.write(" ")
