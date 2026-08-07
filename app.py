@@ -1273,25 +1273,10 @@ else:
 
             badge_html = f'<span class="badge-type">🏠 {row["Tipo de Bem"]}</span>'
 
-            cidade_alvo = row["Cidade Imóvel"]
-            sub_cidade = df_filtered[
-                df_filtered["Cidade Imóvel"] == cidade_alvo
-            ]["Preço do Leilão (R$)"]
-            sub_cidade_valida = sub_cidade[
-                (sub_cidade > 1000) & (sub_cidade.notnull())
-            ]
-
-            if not sub_cidade_valida.empty:
-              p_min = sub_cidade_valida.min()
-              p_max = sub_cidade_valida.max()
-              faixa_bairro_calc = (
-                  f"R$ {p_min:,.0f} a R$ {p_max:,.0f}"
-                  .replace(",", "X")
-                  .replace(".", ",")
-                  .replace("X", ".")
-              )
-            else:
-              faixa_bairro_calc = "Sob Consulta"
+            # Cálculo individual dos custos ocultos para exibição nos cards
+            preco_card = row["Preço do Leilão (R$)"]
+            val_comissao_leiloeiro = preco_card * taxa_leiloeiro
+            val_itbi_cartorio = preco_card * taxa_itbi
 
             msg_wsp = (
                 f"Olá {investidor_sel}! Selecionei uma oportunidade excelente"
@@ -1327,71 +1312,15 @@ else:
                                 <div style="margin-bottom: 8px;">
                                     <span class="price-main">R$ {row['Preço do Leilão (R$)']:,.2f}</span> <span class="price-old">(Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f})</span><br>
                                     <span class="price-profit">💰 Lucro Líquido Real: R$ {row['Lucro Líquido Real (R$)']:,.2f}</span><br>
+                                    <span class="price-costs">• Comissão do Leiloeiro: R$ {val_comissao_leiloeiro:,.2f}</span><br>
+                                    <span class="price-costs">• ITBI e Cartório: R$ {val_itbi_cartorio:,.2f}</span><br>
                                     <span class="price-costs">🛠️ Custo Total Estimado: R$ {row['Custo Total Estimado (R$)']:,.2f}</span>
-                                </div>
-                                <hr style="border: 0.5px solid #E2E8F0; margin: 8px 0;">
-                                <div style="font-size: 0.85rem; color: #334155; margin-bottom: 8px;">
-                                    📊 <b>Inteligência de Mercado (Região):</b><br>
-                                    - Faixa de Leilões na Cidade: <b>{faixa_bairro_calc}</b>
                                 </div>
                                 <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px;"><b>Endereço:</b> {row['Endereço']}</p>
                             </div>
                             """,
                   unsafe_allow_html=True,
               )
-
-              # PAINEL EXPANSÍVEL DE ANÁLISE DE MERCADO AUTOMATIZADA (POR CIDADE + TIPO DE IMÓVEL)
-              with st.expander("🔍 Gerar Análise de Mercado (Automática)"):
-                if st.button(
-                    "✨ Calcular Média e Valores da Região",
-                    key=f"btn_pesq_{idx}_{row['Título do Imóvel'][:15]}",
-                ):
-                  with st.spinner("Analisando mercado do mesmo tipo de imóvel..."):
-                    cidade_alvo_imovel = row["Cidade Imóvel"]
-                    tipo_alvo_imovel = row["Tipo de Bem"]
-
-                    # Filtra estritamente por mesma cidade e mesmo tipo de bem
-                    df_mesmo_mercado = df_filtered[
-                        (df_filtered["Cidade Imóvel"] == cidade_alvo_imovel)
-                        & (df_filtered["Tipo de Bem"] == tipo_alvo_imovel)
-                    ]
-
-                    # Se a seleção específica for muito restrita, expande para toda a cidade
-                    if len(df_mesmo_mercado) < 1:
-                      df_mesmo_mercado = df_filtered[
-                          df_filtered["Cidade Imóvel"] == cidade_alvo_imovel
-                      ]
-
-                    if not df_mesmo_mercado.empty:
-                      val_medio = df_mesmo_mercado[
-                          "Preço do Leilão (R$)"
-                      ].mean()
-                      val_menor = df_mesmo_mercado[
-                          "Preço do Leilão (R$)"
-                      ].min()
-                      val_maior = df_mesmo_mercado[
-                          "Preço do Leilão (R$)"
-                      ].max()
-                      total_comparaveis = len(df_mesmo_mercado)
-                    else:
-                      val_medio = row["Preço do Leilão (R$)"]
-                      val_menor = row["Preço do Leilão (R$)"]
-                      val_maior = row["Preço do Leilão (R$)"]
-                      total_comparaveis = 1
-
-                    st.markdown(
-                        f"""
-                                <p style="font-size: 0.9rem; color: #334155; margin-bottom: 8px;">
-                                    <b>Critério:</b> {tipo_alvo_imovel} em <b>{cidade_alvo_imovel}</b> ({total_comparaveis} comparáveis na base)
-                                </p>
-                                <ul style="color: #1E293B; font-size: 0.92rem; line-height: 1.6; padding-left: 20px;">
-                                    <li><b>Média de Valor na Região:</b> R$ {val_medio:,.2f}</li>
-                                    <li><b>Menor Preço Encontrado:</b> R$ {val_menor:,.2f}</li>
-                                    <li><b>Maior Preço Encontrado:</b> R$ {val_maior:,.2f}</li>
-                                </ul>
-                                """,
-                        unsafe_allow_html=True,
-                    )
 
               # BOTÕES DE AÇÃO
               b_col1, b_col2, b_col3 = st.columns(3)
