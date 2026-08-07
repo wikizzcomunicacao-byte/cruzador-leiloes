@@ -950,8 +950,6 @@ else:
             "📋 Tabela de Oportunidades",
             f"⭐ Selecionados ({num_sel})",
             "👤 Vitrine / Cards por Investidor",
-            "🧮 Calculadora Financeira",
-            "🌐 Panorama de Mercado",
         ]
         if is_tester
         else [
@@ -959,12 +957,11 @@ else:
             "📋 Tabela de Oportunidades & Download",
             f"⭐ Selecionados ({num_sel})",
             "👤 Vitrine / Cards por Investidor (PDF / WhatsApp)",
-            "🧮 Calculadora Financeira",
-            "🌐 Panorama de Mercado",
         ]
     )
 
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(tab_labels)
+    tabs = st.tabs(tab_labels)
+    tab1, tab2, tab3, tab4 = tabs[0], tabs[1], tabs[2], tabs[3]
 
     with tab1:
       st.write(" ")
@@ -1377,218 +1374,6 @@ else:
               st.write("---")
 
         renderizar_vitrine_v25(df_paginado)
-
-    with tab5:
-      st.write(" ")
-      st.subheader("🧮 Calculadora de Viabilidade Financeira de Leilões")
-      st.markdown(
-          "Simule os custos operacionais e o lucro líquido ajustado para qualquer"
-          " imóvel."
-      )
-
-      calc_col1, calc_col2 = st.columns(2)
-
-      with calc_col1:
-        st.markdown("#### 📥 Parâmetros de Aquisição")
-        val_lance = st.number_input(
-            "Valor do Lance / Arrematação (R$)",
-            min_value=0.0,
-            value=250000.0,
-            step=10000.0,
-        )
-        val_mercado = st.number_input(
-            "Valor de Mercado Estimado / Avaliação (R$)",
-            min_value=0.0,
-            value=400000.0,
-            step=10000.0,
-        )
-        p_leiloeiro = (
-            st.slider("Comissão do Leiloeiro (%)", 0.0, 10.0, 5.0, 0.5) / 100.0
-        )
-        p_itbi = (
-            st.slider("ITBI e Custos de Cartório / Registro (%)", 0.0, 10.0, 3.0, 0.5)
-            / 100.0
-        )
-        custo_reforma = st.number_input(
-            "Estimativa de Reforma / Limpeza (R$)",
-            min_value=0.0,
-            value=15000.0,
-            step=5000.0,
-        )
-
-      with calc_col2:
-        st.markdown("#### 📊 Resultado da Simulação")
-
-        comissao_val = val_lance * p_leiloeiro
-        itbi_val = val_lance * p_itbi
-        custo_total_calc = val_lance + comissao_val + itbi_val + custo_reforma
-        lucro_calc = val_mercado - custo_total_calc
-        roi_calc = (
-            (lucro_calc / custo_total_calc) * 100
-            if custo_total_calc > 0
-            else 0
-        )
-        desconto_calc = (
-            ((val_mercado - val_lance) / val_mercado) * 100
-            if val_mercado > 0
-            else 0
-        )
-
-        st.metric(
-            "💰 Custo Total de Aquisição",
-            f"R$ {custo_total_calc:,.2f}",
-            delta=f"Desconto: {desconto_calc:.1f}%",
-        )
-        st.metric(
-            "📈 Lucro Líquido Estimado",
-            f"R$ {lucro_calc:,.2f}",
-            delta=f"ROI: {roi_calc:.1f}%",
-        )
-
-        st.info(
-            f"• **Comissão do Leiloeiro:** R$ {comissao_val:,.2f}\n\n"
-            f"• **ITBI e Cartório:** R$ {itbi_val:,.2f}\n\n"
-            f"• **Reforma/Outros:** R$ {custo_reforma:,.2f}"
-        )
-
-    # ---------------------------------------------------------
-    # ABA: 🌐 PANORAMA DE MERCADO
-    # ---------------------------------------------------------
-    with tab6:
-      st.subheader("🌐 Panorama de Mercado Imobiliário")
-      st.markdown(
-          "Faça uma análise de mercado local em segundos preenchendo os"
-          " parâmetros e selecionando os portais desejados."
-      )
-
-      pan_col1, pan_col2 = st.columns([1, 1])
-      with pan_col1:
-        tipo_imovel_pano = st.selectbox(
-            "Tipo de Imóvel", ["Casa", "Apartamento", "Terreno", "Comercial"]
-        )
-        end_pano = st.text_input("Endereço", value="Rua Josefino Chaves, 884")
-        bairro_pano = st.text_input("Bairro", value="Morada do Sol")
-      with pan_col2:
-        cidade_pano = st.text_input("Cidade", value="Potirendaba")
-        est_pano, area_pano = st.columns(2)
-        with est_pano:
-          estado_pano = st.text_input("Estado", value="SP")
-        with area_pano:
-          area_m2_pano = st.number_input(
-              "Área do Imóvel (m²)", min_value=1.0, value=86.61, step=1.0
-          )
-
-      st.markdown("##### 🔌 Selecione os portais de busca:")
-      p_cols = st.columns(6)
-      p1 = p_cols[0].checkbox("ZAP Imóveis", value=True)
-      p2 = p_cols[1].checkbox("Viva Real", value=True)
-      p3 = p_cols[2].checkbox("W Imóveis", value=False)
-      p4 = p_cols[3].checkbox("Quinto Andar", value=True)
-      p5 = p_cols[4].checkbox("Chaves Na Mão", value=False)
-      p6 = p_cols[5].checkbox("DF Imóveis", value=False)
-
-      if st.button(
-          "🔍 Buscar na Região (Análise de Mercado)", type="primary"
-      ):
-        with st.spinner(
-            "Consultando dados de mercado e calculando estatísticas..."
-        ):
-          media_m2 = 5053.35
-          media_preco = 1012428.00
-          min_m2 = 2760.00
-          max_m2 = 9517.83
-          total_analisados = 5
-          valor_estimado_calc = area_m2_pano * media_m2
-
-          st.markdown("---")
-          st.markdown("### 📊 Estatísticas da Região")
-
-          s1, s2, s3 = st.columns(3)
-          s1.metric("Bairro", bairro_pano)
-          s2.metric("Média R$/m²", f"R$ {media_m2:,.2f}")
-          s3.metric("Média Preço", f"R$ {media_preco:,.2f}")
-
-          s4, s5, s6 = st.columns(3)
-          s4.metric("Min R$/m²", f"R$ {min_m2:,.2f}")
-          s5.metric("Máx R$/m²", f"R$ {max_m2:,.2f}")
-          s6.metric("Imóveis analisados", str(total_analisados))
-
-          st.write(" ")
-          res_col1, res_col2 = st.columns(2)
-          res_col1.metric("Área informada", f"{area_m2_pano} m²")
-          res_col2.metric(
-              "Valor estimado",
-              f"R$ {valor_estimado_calc:,.2f}",
-              delta="Valor de Mercado",
-          )
-
-          st.info(
-              f"💡 **Estimativa:** Com base no preço médio de"
-              f" **R$ {media_m2:,.2f} por m²** na região, um imóvel de"
-              f" **{area_m2_pano} m²** teria valor estimado de"
-              f" **R$ {valor_estimado_calc:,.2f}**."
-          )
-
-          st.markdown("### 📋 Imóveis Comparáveis")
-          dados_comp = [
-              {
-                  "Endereço": f"Rua Marechal Cândido Rondon, {cidade_pano}",
-                  "m²": 250,
-                  "R$/m²": 2760.00,
-                  "Preço": 690000.00,
-                  "Quartos": 0,
-                  "Portal": "Quinto Andar",
-              },
-              {
-                  "Endereço": f"{end_pano}, {cidade_pano}",
-                  "m²": 273,
-                  "R$/m²": 3223.44,
-                  "Preço": 880000.00,
-                  "Quartos": 0,
-                  "Portal": "Quinto Andar",
-              },
-              {
-                  "Endereço": f"{end_pano}, {cidade_pano}",
-                  "m²": 254,
-                  "R$/m²": 4330.71,
-                  "Preço": 1100000.00,
-                  "Quartos": 0,
-                  "Portal": "Quinto Andar",
-              },
-              {
-                  "Endereço": f"{end_pano}, {cidade_pano}",
-                  "m²": 230,
-                  "R$/m²": 5434.78,
-                  "Preço": 1250000.00,
-                  "Quartos": 0,
-                  "Portal": "Quinto Andar",
-              },
-              {
-                  "Endereço": f"{end_pano}, {cidade_pano}",
-                  "m²": 120,
-                  "R$/m²": 9517.83,
-                  "Preço": 1142140.00,
-                  "Quartos": 0,
-                  "Portal": "Quinto Andar",
-              },
-          ]
-          df_comparaveis = pd.DataFrame(dados_comp)
-          st.dataframe(df_comparaveis, use_container_width=True)
-
-          st.markdown("### 📈 Distribuição de Preços na Região")
-          fig_pano = px.bar(
-              df_comparaveis,
-              x="R$/m²",
-              y="Preço",
-              title="Faixa de Preço por m² dos Comparáveis",
-              color_discrete_sequence=["#0052CC"],
-          )
-          st.plotly_chart(fig_pano, use_container_width=True)
-
-          if st.button("📥 Exportar PDF do Panorama de Mercado"):
-            st.success(
-                "Relatório em PDF gerado com sucesso para download imediato!"
-            )
 
   elif "df_final" not in st.session_state:
     st.info(
