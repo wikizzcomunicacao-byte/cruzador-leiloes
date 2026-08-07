@@ -6,3 +6,4 @@ plotly
 numpy
 duckduckgo-search
 reportlab
+pypdf
