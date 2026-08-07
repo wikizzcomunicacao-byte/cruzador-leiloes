@@ -108,6 +108,11 @@ else:
             padding-top: 1.5rem;
             padding-bottom: 3rem;
         }
+
+        .stTextInput input, .stSelectbox select, .stNumberInput input {
+            color: #1E293B !important;
+            opacity: 1 !important;
+        }
         
         div.stButton > button:first-child {
             background-color: #0052CC;
@@ -1335,50 +1340,47 @@ else:
                   unsafe_allow_html=True,
               )
 
-              # PAINEL EXPANSÍVEL DE ANÁLISE DE MERCADO OTIMIZADO
-              with st.expander("🔍 Ver Média de Valor da Região (Pesquisa Inteligente)"):
+              # PAINEL EXPANSÍVEL DE ANÁLISE DE MERCADO AUTOMATIZADA
+              with st.expander("🔍 Gerar Análise de Mercado (Automática)"):
                 if st.button(
-                    "✨ Gerar Análise de Mercado",
+                    "✨ Calcular Médias e Valores",
                     key=f"btn_pesq_{idx}_{row['Título do Imóvel'][:15]}",
                 ):
-                  with st.spinner("Analisando mercado da região..."):
-                    val_avaliacao = (
-                        row["Valor de Avaliação (R$)"]
-                        if pd.notnull(row["Valor de Avaliação (R$)"])
-                        and row["Valor de Avaliação (R$)"] > 0
-                        else row["Preço do Leilão (R$)"] * 1.5
-                    )
-                    v_min = val_avaliacao * 0.85
-                    v_max = val_avaliacao * 1.15
+                  with st.spinner("Calculando dados da região..."):
+                    # Filtra todos os imóveis da mesma cidade na base carregada para calcular a média, menor e maior valor real
+                    cidade_alvo_imovel = row["Cidade Imóvel"]
+                    df_mesma_cidade = df_filtered[
+                        df_filtered["Cidade Imóvel"] == cidade_alvo_imovel
+                    ]
 
-                    end_limpo = f"{row['Endereço']}, {row['Cidade Imóvel']} - {row['Estado Imóvel']}"
-                    termo_pesquisa = f"media valor de mercado {end_limpo}"
-                    url_google = (
-                        f"https://www.google.com/search?q={quote(termo_pesquisa)}"
-                    )
+                    if not df_mesma_cidade.empty:
+                      val_medio = df_mesma_cidade[
+                          "Preço do Leilão (R$)"
+                      ].mean()
+                      val_menor = df_mesma_cidade[
+                          "Preço do Leilão (R$)"
+                      ].min()
+                      val_maior = df_mesma_cidade[
+                          "Preço do Leilão (R$)"
+                      ].max()
+                      total_comparaveis = len(df_mesma_cidade)
+                    else:
+                      val_medio = row["Preço do Leilão (R$)"]
+                      val_menor = row["Preço do Leilão (R$)"]
+                      val_maior = row["Preço do Leilão (R$)"]
+                      total_comparaveis = 1
 
                     st.markdown(
                         f"""
                                 <p style="font-size: 0.9rem; color: #334155; margin-bottom: 8px;">
-                                    <b>Endereço Analisado:</b> <code>{end_limpo}</code>
+                                    <b>Cidade Analisada:</b> <code>{cidade_alvo_imovel}</code> ({total_comparaveis} imóveis na base)
                                 </p>
                                 <ul style="color: #1E293B; font-size: 0.92rem; line-height: 1.6; padding-left: 20px;">
-                                    <li><b>Valor Médio de Referência:</b> R$ {val_avaliacao:,.2f}</li>
-                                    <li><b>Faixa Estimada de Mercado:</b> R$ {v_min:,.2f} a R$ {v_max:,.2f}</li>
-                                    <li><b>Avaliação Oficial do Leiloeiro:</b> R$ {row['Valor de Avaliação (R$)']:,.2f} (Condizente com o histórico da região).</li>
+                                    <li><b>Média de Valor:</b> R$ {val_medio:,.2f}</li>
+                                    <li><b>Menor Valor Encontrado:</b> R$ {val_menor:,.2f}</li>
+                                    <li><b>Maior Valor Encontrado:</b> R$ {val_maior:,.2f}</li>
                                 </ul>
                                 """,
-                        unsafe_allow_html=True,
-                    )
-
-                    st.markdown(
-                        f"""
-                        <a href="{url_google}" target="_blank" style="text-decoration: none;">
-                            <div style="background-color: #4285F4; color: white; padding: 8px 12px; border-radius: 6px; text-align: center; font-weight: bold; font-size: 0.85rem; margin-top: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                                🌐 Buscar dados atualizados deste endereço no Google
-                            </div>
-                        </a>
-                        """,
                         unsafe_allow_html=True,
                     )
 
@@ -1512,7 +1514,7 @@ else:
         )
 
     # ---------------------------------------------------------
-    # NOVA ABA: 🌐 PANORAMA DE MERCADO (Estilo Monitor Leilão)
+    # ABA: 🌐 PANORAMA DE MERCADO
     # ---------------------------------------------------------
     with tab6:
       st.subheader("🌐 Panorama de Mercado Imobiliário")
@@ -1526,10 +1528,10 @@ else:
         tipo_imovel_pano = st.selectbox(
             "Tipo de Imóvel", ["Casa", "Apartamento", "Terreno", "Comercial"]
         )
-        end_pano = st.text_input("Endereço", value="Rua Bom Pastor, 545")
-        bairro_pano = st.text_input("Bairro", value="Oswaldo Cruz")
+        end_pano = st.text_input("Endereço", value="Rua Josefino Chaves, 884")
+        bairro_pano = st.text_input("Bairro", value="Morada do Sol")
       with pan_col2:
-        cidade_pano = st.text_input("Cidade", value="São Caetano do Sul")
+        cidade_pano = st.text_input("Cidade", value="Potirendaba")
         est_pano, area_pano = st.columns(2)
         with est_pano:
           estado_pano = st.text_input("Estado", value="SP")
@@ -1553,7 +1555,6 @@ else:
         with st.spinner(
             "Consultando dados de mercado e calculando estatísticas..."
         ):
-          # Estatísticas simuladas de referência para a região com base no modelo
           media_m2 = 5053.35
           media_preco = 1012428.00
           min_m2 = 2760.00
