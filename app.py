@@ -148,7 +148,7 @@ else:
             border: 1px solid #E2E8F0;
             border-radius: 12px;
             padding: 1.2rem;
-            padding-bottom: 3.2rem; /* Espaço interno reservado no rodapé do card para os botões */
+            padding-bottom: 3.5rem; /* Espaço reservado internamente na base para os botões */
             margin-bottom: 1.5rem;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             position: relative;
@@ -1289,10 +1289,9 @@ else:
             with col_target:
               st.markdown(badge_html, unsafe_allow_html=True)
 
-              # Conteúdo do card e posicionamento absoluto unificado via HTML
               label_estrela = "⭐" if ja_selecionado else "☆"
 
-              # Renderizamos o card completo usando unicamente markdown HTML para garantir que o botão fique embutido dentro da div branca
+              # Bloco do card e botão de link injetados juntos dentro da mesma div estrutural absoluta
               st.markdown(
                   f"""
                     <div class="property-card">
@@ -1307,8 +1306,8 @@ else:
                         </div>
                         <p style="font-size: 0.85rem; color: #475569; margin-bottom: 0;"><b>Endereço:</b> {row['Endereço']}</p>
                         
-                        <!-- Botões posicionados absolutamente DENTRO do card no canto inferior direito -->
-                        <div style="position: absolute; bottom: 12px; right: 15px; display: flex; gap: 6px;">
+                        <!-- Botão de link posicionado absolutamente DENTRO da caixa branca no canto inferior direito -->
+                        <div style="position: absolute; bottom: 12px; right: 15px; display: flex; gap: 6px; z-index: 5;">
                             <a href="{link_url}" target="_blank" title="Ver Anúncio Oficial" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: #E0E7FF; color: #3730A3; border-radius: 6px; width: 34px; height: 34px; font-size: 1rem; font-weight: bold;">
                                 🔗
                             </a>
@@ -1318,9 +1317,9 @@ else:
                   unsafe_allow_html=True,
               )
 
-              # Colocamos o botão de favoritos do Streamlit logo abaixo posicionado por cima com margem negativa para manter a interatividade
+              # Posicionamento exato do botão de favorito interativo do Streamlit sobreposto perfeitamente ao lado do link
               st.markdown(
-                  '<div style="margin-top: -52px; padding-right: 58px; display: flex; justify-content: flex-end;">',
+                  '<div style="margin-top: -52px; padding-right: 56px; display: flex; justify-content: flex-end;">',
                   unsafe_allow_html=True,
               )
               if st.button(
