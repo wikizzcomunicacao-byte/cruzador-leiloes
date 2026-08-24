@@ -1295,6 +1295,18 @@ else:
                 for item in st.session_state["imoveis_selecionados"]
             )
 
+            # Montagem da mensagem do WhatsApp
+            msg_whatsapp = (
+                f"Olá {investidor_sel}! Encontrei uma excelente oportunidade de leilão para o seu perfil:\n\n"
+                f"🏢 *{row['Título do Imóvel']}*\n"
+                f"📍 Local: {row['Cidade Imóvel']} - {row['Estado Imóvel']}\n"
+                f"💰 Lance Mínimo: R$ {row['Preço do Leilão (R$)']:,.2f}\n"
+                f"💵 Valor de Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f}\n"
+                f"📈 Lucro Líquido Estimado: R$ {row['Lucro Líquido Real (R$)']:,.2f}\n"
+                f"🔗 Acesse o anúncio oficial: {link_url}"
+            )
+            link_wats = f"https://api.whatsapp.com/send?text={quote(msg_whatsapp)}"
+
             with col_target:
               st.markdown(badge_html, unsafe_allow_html=True)
 
@@ -1344,7 +1356,7 @@ else:
                   unsafe_allow_html=True,
               )
 
-              col_b1, col_b2 = st.columns(2)
+              col_b1, col_b2, col_b3 = st.columns(3)
 
               with col_b1:
                 label_estrela = (
@@ -1376,6 +1388,16 @@ else:
                     f"""
                     <a href="{link_url}" target="_blank" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: #E0E7FF; color: #3730A3; border-radius: 8px; height: 44px; font-size: 0.95rem; font-weight: bold; width: 100%; box-shadow: 0 2px 6px rgba(0,0,0,0.05); transition: all 0.2s ease;">
                         🔗 Ver Anúncio
+                    </a>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+              with col_b3:
+                st.markdown(
+                    f"""
+                    <a href="{link_wats}" target="_blank" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: #25D366; color: white; border-radius: 8px; height: 44px; font-size: 0.95rem; font-weight: bold; width: 100%; box-shadow: 0 2px 6px rgba(0,0,0,0.05); transition: all 0.2s ease;">
+                        💬 WhatsApp
                     </a>
                     """,
                     unsafe_allow_html=True,
