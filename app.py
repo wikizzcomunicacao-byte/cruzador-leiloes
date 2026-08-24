@@ -1365,7 +1365,7 @@ else:
                     st.session_state["imoveis_selecionados"].append(
                         row.to_dict()
                     )
-                  st.rerun()
+                  # A remoção do st.rerun() permite que o fragmento atualize instantaneamente sem reiniciar a tela toda
 
               with col_b2:
                 st.markdown(
