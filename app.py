@@ -1226,39 +1226,39 @@ else:
 
         st.write(" ")
 
-        itens_por_pagina = 10
-        total_imoveis = len(df_inv)
-        total_pages = (
-            (total_imoveis + itens_por_pagina - 1) // itens_por_pagina
-            if total_imoveis > 0
-            else 1
-        )
-
-        if total_pages > 1:
-          pagina_atual = st.number_input(
-              "📄 Página de Cards",
-              min_value=1,
-              max_value=total_pages,
-              step=1,
-              key="pag_cards",
-          )
-        else:
-          pagina_atual = 1
-
-        start_idx = (pagina_atual - 1) * itens_por_pagina
-        end_idx = start_idx + itens_por_pagina
-        df_paginado = df_inv.iloc[start_idx:end_idx]
-
-        st.caption(
-            f"Mostrando imóveis {start_idx + 1} a"
-            f" {min(end_idx, total_imoveis)} de {total_imoveis} para este"
-            " investidor."
-        )
-
         @st.fragment
-        def renderizar_vitrine_v25(df_cards):
+        def renderizar_vitrine_com_paginacao(df_investidor):
+          itens_por_pagina = 10
+          total_imoveis = len(df_investidor)
+          total_pages = (
+              (total_imoveis + itens_por_pagina - 1) // itens_por_pagina
+              if total_imoveis > 0
+              else 1
+          )
+
+          if total_pages > 1:
+            pagina_atual = st.number_input(
+                "📄 Página de Cards",
+                min_value=1,
+                max_value=total_pages,
+                step=1,
+                key="pag_cards_fragment",
+            )
+          else:
+            pagina_atual = 1
+
+          start_idx = (pagina_atual - 1) * itens_por_pagina
+          end_idx = start_idx + itens_por_pagina
+          df_paginado = df_investidor.iloc[start_idx:end_idx]
+
+          st.caption(
+              f"Mostrando imóveis {start_idx + 1} a"
+              f" {min(end_idx, total_imoveis)} de {total_imoveis} para este"
+              " investidor."
+          )
+
           cols_cards = st.columns(2)
-          for idx, (_, row) in enumerate(df_cards.iterrows()):
+          for idx, (_, row) in enumerate(df_paginado.iterrows()):
             col_target = cols_cards[idx % 2]
 
             badge_html = f'<span class="badge-type">🏠 {row["Tipo de Bem"]}</span>'
@@ -1279,7 +1279,6 @@ else:
                 for item in st.session_state["imoveis_selecionados"]
             )
 
-            # Montagem da mensagem do WhatsApp
             msg_whatsapp = (
                 f"Olá {investidor_sel}! Encontrei uma excelente oportunidade de leilão para o seu perfil:\n\n"
                 f"🏢 *{row['Título do Imóvel']}*\n"
@@ -1365,7 +1364,6 @@ else:
                     st.session_state["imoveis_selecionados"].append(
                         row.to_dict()
                     )
-                  # A remoção do st.rerun() permite que o fragmento atualize instantaneamente sem reiniciar a tela toda
 
               with col_b2:
                 st.markdown(
@@ -1389,7 +1387,7 @@ else:
 
               st.write("<br>", unsafe_allow_html=True)
 
-        renderizar_vitrine_v25(df_paginado)
+        renderizar_vitrine_com_paginacao(df_inv)
 
   elif "df_final" not in st.session_state:
     st.info(
