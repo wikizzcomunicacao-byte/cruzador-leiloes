@@ -1187,7 +1187,7 @@ else:
             df_filtered["Nome do Investidor"].unique().tolist()
         )
 
-        c_sel1, c_sel2, c_sel3 = st.columns([2, 1, 1])
+        c_sel1, c_sel2 = st.columns([2, 1])
         with c_sel1:
           investidor_sel = st.selectbox(
               "👤 Selecione o Investidor:",
@@ -1203,26 +1203,10 @@ else:
             if not is_tester:
               pdf_bytes = gerar_pdf_informativo(investidor_sel, df_inv_curr)
               st.download_button(
-                  label="📄 PDF Informativo 1",
+                  label="📄 Baixar PDF Informativo",
                   data=pdf_bytes,
                   file_name=(
-                      f"informativo_1_{normalize(investidor_sel).replace(' ', '_')}.pdf"
-                  ),
-                  mime="application/pdf",
-                  use_container_width=True,
-              )
-            else:
-              st.info("🔒 PDF restrito.")
-        with c_sel3:
-          st.write(" ")
-          if not df_inv_curr.empty:
-            if not is_tester:
-              pdf_bytes2 = gerar_pdf_informativo(investidor_sel, df_inv_curr)
-              st.download_button(
-                  label="📄 PDF Informativo 2",
-                  data=pdf_bytes2,
-                  file_name=(
-                      f"informativo_2_{normalize(investidor_sel).replace(' ', '_')}.pdf"
+                      f"informativo_{normalize(investidor_sel).replace(' ', '_')}.pdf"
                   ),
                   mime="application/pdf",
                   use_container_width=True,
