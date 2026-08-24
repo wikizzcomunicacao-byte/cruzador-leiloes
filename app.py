@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import io
 import re
 from urllib.parse import quote
@@ -33,10 +33,14 @@ if "autenticado" not in st.session_state:
   st.session_state["autenticado"] = False
 if "usuario_logado" not in st.session_state:
   st.session_state["usuario_logado"] = ""
+if "tentativas_erro" not in st.session_state:
+  st.session_state["tentativas_erro"] = 0
+if "tempo_bloqueio_ate" not in st.session_state:
+  st.session_state["tempo_bloqueio_ate"] = None
 
 
 # ---------------------------------------------------------
-# 3. TELA DE LOGIN
+# 3. TELA DE LOGIN COM BLOQUEIO PROGRESSIVO
 # ---------------------------------------------------------
 def tela_login():
   st.markdown("<br><br><br>", unsafe_allow_html=True)
@@ -53,6 +57,21 @@ def tela_login():
         unsafe_allow_html=True,
     )
 
+    # Verificar se está bloqueado
+    agora = datetime.now()
+    bloqueio_ate = st.session_state["tempo_bloqueio_ate"]
+
+    if bloqueio_ate and agora < bloqueio_ate:
+      tempo_restante = int((bloqueio_ate - agora).total_seconds())
+      minutos = tempo_restante // 60
+      segundos = tempo_restante % 60
+      st.error(
+          f"⚠️ Acesso temporariamente bloqueado por excesso de tentativas."
+          f" Tente novamente em **{minutos:02d}:{segundos:02d}**."
+      )
+      st.markdown("</div>", unsafe_allow_html=True)
+      return
+
     user_input = st.text_input("👤 Usuário", key="login_user")
     pass_input = st.text_input("🔑 Senha", type="password", key="login_pass")
 
@@ -61,9 +80,34 @@ def tela_login():
       if user_input in USUARIOS and USUARIOS[user_input] == pass_input:
         st.session_state["autenticado"] = True
         st.session_state["usuario_logado"] = user_input
+        st.session_state["tentativas_erro"] = 0
+        st.session_state["tempo_bloqueio_ate"] = None
         st.rerun()
       else:
-        st.error("Usuário ou senha incorretos!")
+        st.session_state["tentativas_erro"] += 1
+        erros = st.session_state["tentativas_erro"]
+
+        if erros == 5:
+          st.session_state["tempo_bloqueio_ate"] = datetime.now() + timedelta(
+              minutes=1
+          )
+          st.error(
+              "❌ 5ª tentativa incorreta! Sistema bloqueado por **1 minuto**."
+          )
+        elif erros >= 6:
+          st.session_state["tempo_bloqueio_ate"] = datetime.now() + timedelta(
+              minutes=10
+          )
+          st.error(
+              "❌ Muitas tentativas incorretas! Sistema bloqueado por **10"
+              " minutos**."
+          )
+        else:
+          st.error(
+              f"Usuário ou senha incorretos! (Tentativa {erros} de 5 antes do"
+              " bloqueio)"
+          )
+        st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -1228,7 +1272,7 @@ else:
 
         @st.fragment
         def renderizar_vitrine_com_paginacao(df_investidor):
-          itens_por_pagina = 50
+          itens_por_pagina = 20  # Aumentado para 20 imóveis por página com alta performance
           total_imoveis = len(df_investidor)
           total_pages = (
               (total_imoveis + itens_por_pagina - 1) // itens_por_pagina
