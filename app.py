@@ -1228,7 +1228,7 @@ else:
 
         @st.fragment
         def renderizar_vitrine_com_paginacao(df_investidor):
-          itens_por_pagina = 10
+          itens_por_pagina = 50
           total_imoveis = len(df_investidor)
           total_pages = (
               (total_imoveis + itens_por_pagina - 1) // itens_por_pagina
