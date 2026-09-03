@@ -589,9 +589,9 @@ else:
           for c in cells:
             c.alignment = align_center
         elif "Link" in str(col_name):
-          for c in cells:
-            c.font = font_link
-            c.alignment = align_center
+            for c in cells:
+              c.font = font_link
+              c.alignment = align_center
         else:
           for c in cells:
             c.alignment = align_left
@@ -666,20 +666,11 @@ else:
 
   st.divider()
 
-
-  @st.cache_data
-  def carregar_dados_excel(file_l, file_i):
-    df_l = pd.read_excel(file_l)
-    df_i = pd.read_excel(file_i)
-    return df_l, df_i
-
-
   if file_leiloes and file_investidores and executar:
     with st.spinner("Analisando critérios e cruzando bases de dados..."):
       try:
-        df_leiloes, df_investidores = carregar_dados_excel(
-            file_leiloes, file_investidores
-        )
+        df_leiloes = pd.read_excel(file_leiloes)
+        df_investidores = pd.read_excel(file_investidores)
 
         df_leiloes["norm_cidade"] = df_leiloes["Cidade"].apply(normalize)
         df_leiloes["norm_estado"] = df_leiloes["Estado"].apply(normalize)
@@ -865,7 +856,7 @@ else:
       except Exception as e:
         st.error(f"Erro ao processar as planilhas: {e}")
 
-  # EXIBIÇÃO DO DASHBOARD E ABAS COM PROTEÇÃO CONTRA REINÍCIO
+  # EXIBIÇÃO DO DASHBOARD E ABAS
   if "df_final" in st.session_state and not st.session_state["df_final"].empty:
     df_base = st.session_state["df_final"]
 
@@ -1184,7 +1175,7 @@ else:
 
         @st.fragment
         def renderizar_vitrine_com_paginacao(df_investidor):
-          itens_por_pagina = 20
+          itens_por_pagina = 20  # Mantido com 20 itens por página para alta performance
           total_imoveis = len(df_investidor)
           total_pages = (
               (total_imoveis + itens_por_pagina - 1) // itens_por_pagina
