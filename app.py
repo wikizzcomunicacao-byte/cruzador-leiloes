@@ -37,6 +37,8 @@ if "tentativas_erro" not in st.session_state:
   st.session_state["tentativas_erro"] = 0
 if "tempo_bloqueio_ate" not in st.session_state:
   st.session_state["tempo_bloqueio_ate"] = None
+if "imoveis_selecionados" not in st.session_state:
+  st.session_state["imoveis_selecionados"] = []
 
 
 # ---------------------------------------------------------
@@ -57,7 +59,6 @@ def tela_login():
         unsafe_allow_html=True,
     )
 
-    # Verificar se está bloqueado
     agora = datetime.now()
     bloqueio_ate = st.session_state["tempo_bloqueio_ate"]
 
@@ -120,7 +121,6 @@ if not st.session_state["autenticado"]:
 else:
   is_tester = st.session_state["usuario_logado"] == "teste"
 
-  # BARRA LATERAL
   with st.sidebar:
     st.title("🏢 Cruzador Pro")
     if is_tester:
@@ -140,99 +140,33 @@ else:
     st.divider()
     st.markdown("💡 *Dica: Use as abas para navegar entre os recursos.*")
 
-  # ESTILIZAÇÃO CSS CUSTOMIZADA
   st.markdown(
       """
         <style>
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
         header {visibility: hidden;}
-        
-        .main .block-container {
-            padding-top: 1.5rem;
-            padding-bottom: 3rem;
-        }
-
-        .stTextInput input, .stSelectbox select, .stNumberInput input {
-            color: #1E293B !important;
-            opacity: 1 !important;
-        }
-        
+        .main .block-container { padding-top: 1.5rem; padding-bottom: 3rem; }
+        .stTextInput input, .stSelectbox select, .stNumberInput input { color: #1E293B !important; opacity: 1 !important; }
         div.stButton > button:first-child {
-            background-color: #0052CC;
-            color: white;
-            font-weight: bold;
-            border-radius: 8px;
-            padding: 0.6rem 1rem;
-            border: none;
-            width: 100%;
-            transition: all 0.3s ease;
+            background-color: #0052CC; color: white; font-weight: bold; border-radius: 8px; padding: 0.6rem 1rem; border: none; width: 100%; transition: all 0.3s ease;
         }
-        div.stButton > button:first-child:hover {
-            background-color: #003D99;
-            color: white;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-        
-        div[data-testid="stMetric"] {
-            background-color: #FFFFFF;
-            border: 1px solid #E2E8F0;
-            padding: 1rem;
-            border-radius: 12px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
-        }
-        div[data-testid="stMetricValue"] {
-            font-size: 1.6rem;
-            font-weight: 700;
-            color: #0052CC;
-        }
-        
-        .property-card {
-            background-color: #FFFFFF;
-            border: 1px solid #E2E8F0;
-            border-radius: 12px;
-            padding: 1.2rem;
-            margin-bottom: 0.5rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-        .property-card:hover {
-            box-shadow: 0 4px 14px rgba(0,0,0,0.1);
-        }
-        .badge-type {
-            background-color: #E0E7FF;
-            color: #3730A3;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.82rem;
-            font-weight: 600;
-            display: inline-block;
-            margin-bottom: 8px;
-        }
-        .price-main {
-            font-size: 1.35rem;
-            font-weight: bold;
-            color: #166534;
-        }
-        .price-profit {
-            font-size: 1.05rem;
-            font-weight: 700;
-            color: #2563EB;
-        }
-        .price-costs {
-            font-size: 0.88rem;
-            color: #64748B;
-        }
-        .price-old {
-            font-size: 0.9rem;
-            color: #9CA3AF;
-            text-decoration: line-through;
-        }
+        div.stButton > button:first-child:hover { background-color: #003D99; color: white; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
+        div[data-testid="stMetric"] { background-color: #FFFFFF; border: 1px solid #E2E8F0; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
+        div[data-testid="stMetricValue"] { font-size: 1.6rem; font-weight: 700; color: #0052CC; }
+        .property-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 1.2rem; margin-bottom: 0.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .property-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.1); }
+        .badge-type { background-color: #E0E7FF; color: #3730A3; padding: 4px 10px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; display: inline-block; margin-bottom: 8px; }
+        .price-main { font-size: 1.35rem; font-weight: bold; color: #166534; }
+        .price-profit { font-size: 1.05rem; font-weight: 700; color: #2563EB; }
+        .price-costs { font-size: 0.88rem; color: #64748B; }
+        .price-old { font-size: 0.9rem; color: #9CA3AF; text-decoration: line-through; }
         </style>
     """,
       unsafe_allow_html=True,
   )
 
-  # FUNÇÕES AUXILIARES DE TRATAMENTO
+
   def clean_ascii(text):
     if not isinstance(text, str):
       text = str(text) if text is not None else ""
@@ -286,6 +220,7 @@ else:
       text = text.replace(k, v)
     return text.encode("latin-1", "replace").decode("latin-1")
 
+
   def normalize(text):
     if not isinstance(text, str):
       return ""
@@ -298,6 +233,7 @@ else:
     text = re.sub(r"[ç]", "c", text)
     text = re.sub(r"[^a-z0-9\s]", " ", text)
     return " ".join(text.split())
+
 
   def parse_budget(budget_str):
     budget_str = str(budget_str)
@@ -314,6 +250,7 @@ else:
     else:
       return 0, 999999999
 
+
   def parse_types(tipos_str):
     norm_t = normalize(tipos_str)
     res = set()
@@ -329,6 +266,7 @@ else:
       res.update(["Area Rural", "Comercial", "Indefinido", "Vaga de Garagem"])
     return list(res)
 
+
   class InformativoLeiloesPDF(FPDF):
 
     def header(self):
@@ -336,13 +274,11 @@ else:
         self.image("fundo.png", 0, 0, 210, 297)
       except Exception:
         pass
-
       if self.page_no() > 1:
         try:
           self.image("logo.png", 10, 8, 30)
         except Exception:
           pass
-
         self.set_font("Arial", "B", 8)
         self.set_text_color(100, 116, 139)
         self.set_xy(45, 10)
@@ -373,13 +309,12 @@ else:
           "C",
       )
 
+
   def gerar_pdf_informativo(nome_investidor, df_inv):
     pdf = InformativoLeiloesPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
-
     pdf.add_page()
     pdf.ln(5)
-
     try:
       pdf.image("logo.png", x=80, y=12, w=50)
       pdf.ln(25)
@@ -391,7 +326,6 @@ else:
     pdf.cell(0, 10, clean_ascii("INFORMATIVO DE IMÓVEIS"), 0, 1, "C")
     pdf.cell(0, 10, clean_ascii("EM LEILÃO"), 0, 1, "C")
     pdf.ln(8)
-
     pdf.set_font("Arial", "B", 11)
     pdf.set_text_color(70, 80, 95)
     pdf.cell(0, 6, clean_ascii("LOURENÇO COLOMBO E ROZANI"), 0, 1, "C")
@@ -432,13 +366,9 @@ else:
     pdf.cell(0, 5, clean_ascii("PARÂMETROS DO INVESTIDOR:"), 0, 1)
     pdf.set_x(20)
     pdf.set_font("Arial", "", 9)
-    pdf.cell(
-        0, 5, clean_ascii(f"Regiões Selecionadas: {cid_req}"), 0, 1
-    )
+    pdf.cell(0, 5, clean_ascii(f"Regiões Selecionadas: {cid_req}"), 0, 1)
     pdf.set_x(20)
-    pdf.cell(
-        0, 5, clean_ascii(f"Faixa de Orçamento: {faixa_req}"), 0, 1
-    )
+    pdf.cell(0, 5, clean_ascii(f"Faixa de Orçamento: {faixa_req}"), 0, 1)
 
     if df_inv.empty:
       pdf.add_page()
@@ -456,7 +386,6 @@ else:
       )
     else:
       tipos_unicos = df_inv["Tipo de Bem"].unique()
-
       for tipo in tipos_unicos:
         pdf.add_page()
         pdf.set_font("Arial", "B", 13)
@@ -467,13 +396,10 @@ else:
         pdf.ln(4)
 
         df_tipo = df_inv[df_inv["Tipo de Bem"] == tipo]
-
         for idx, (_, row) in enumerate(df_tipo.iterrows(), start=1):
           if pdf.get_y() > 235:
             pdf.add_page()
-
           y_inicial = pdf.get_y()
-
           pdf.set_fill_color(252, 253, 255)
           pdf.set_draw_color(210, 215, 225)
           pdf.rect(10, y_inicial, 190, 48, style="DF")
@@ -486,10 +412,7 @@ else:
 
           pdf.set_font("Arial", "", 8)
           pdf.set_text_color(50, 60, 75)
-
-          col1_x = 14
-          col2_x = 75
-          col3_x = 135
+          col1_x, col2_x, col3_x = 14, 75, 135
           current_y = pdf.get_y() + 1
 
           pdf.set_xy(col1_x, current_y)
@@ -542,9 +465,7 @@ else:
           pdf.cell(
               60,
               4,
-              clean_ascii(
-                  f"Modalidade: {row.get('Modalidade', 'Leilão')}"
-              ),
+              clean_ascii(f"Modalidade: {row.get('Modalidade', 'Leilão')}"),
               0,
               1,
           )
@@ -607,7 +528,6 @@ else:
                   link_anuncio if link_anuncio.startswith("http") else None
               ),
           )
-
           pdf.ln(6)
 
     out = pdf.output()
@@ -615,21 +535,19 @@ else:
       return out.encode("latin-1")
     return bytes(out)
 
+
   def gerar_excel_profissional(df_input):
     output = io.BytesIO()
     df_export = df_input.copy()
-
     if "Link do Imóvel" in df_export.columns:
       df_export["Link do Imóvel"] = df_export["Link do Imóvel"].apply(
           lambda x: f'=HYPERLINK("{x}", "🔗 Ver Anúncio")'
           if pd.notnull(x) and str(x).startswith("http")
           else x
       )
-
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
       df_export.to_excel(writer, index=False, sheet_name="Oportunidades")
       ws = writer.sheets["Oportunidades"]
-
       ws.views.sheetView[0].showGridLines = True
       ws.freeze_panes = "A2"
       ws.auto_filter.ref = ws.dimensions
@@ -641,13 +559,11 @@ else:
       font_link = Font(
           name="Calibri", size=11, color="0066CC", underline="single"
       )
-
       align_center = Alignment(horizontal="center", vertical="center")
       align_right = Alignment(horizontal="right", vertical="center")
       align_left = Alignment(horizontal="left", vertical="center")
 
       col_names = [cell.value for cell in ws[1]]
-
       for cell in ws[1]:
         cell.font = font_header
         cell.fill = fill_header
@@ -656,7 +572,6 @@ else:
       for col_idx, col_name in enumerate(col_names, start=1):
         col_letter = get_column_letter(col_idx)
         cells = ws[col_letter][1:]
-
         if (
             "Preço" in str(col_name)
             or "Avaliação" in str(col_name)
@@ -698,14 +613,12 @@ else:
           "Endereço": 45,
           "Link do Imóvel": 18,
       }
-
       for col_idx, col_name in enumerate(col_names, start=1):
         col_letter = get_column_letter(col_idx)
         ws.column_dimensions[col_letter].width = col_widths.get(col_name, 20)
-
     return output.getvalue()
 
-  # CABEÇALHO PRINCIPAL
+
   col_head1, col_head2 = st.columns([4, 1])
   with col_head1:
     st.title("🎯 Cruzador Automático de Leilões & Inteligência")
@@ -713,7 +626,6 @@ else:
         "Cruzamento inteligente entre o perfil dos investidores e as"
         " oportunidades em leilão."
     )
-
   with col_head2:
     st.write(" ")
     with st.popover("❓ Como Usar"):
@@ -727,11 +639,9 @@ else:
 
   st.divider()
 
-  # CENTRAL DE UPLOAD NA TELA PRINCIPAL
   with st.container():
     st.subheader("📂 Central de Envio e Parâmetros")
     up_col1, up_col2, up_col3 = st.columns([1.5, 1.5, 1])
-
     with up_col1:
       file_leiloes = st.file_uploader(
           "1️⃣ Base de Leilões (.xlsx)", type=["xlsx", "xls"]
@@ -756,12 +666,20 @@ else:
 
   st.divider()
 
-  # PROCESSAMENTO DE DADOS
+
+  @st.cache_data
+  def carregar_dados_excel(file_l, file_i):
+    df_l = pd.read_excel(file_l)
+    df_i = pd.read_excel(file_i)
+    return df_l, df_i
+
+
   if file_leiloes and file_investidores and executar:
     with st.spinner("Analisando critérios e cruzando bases de dados..."):
       try:
-        df_leiloes = pd.read_excel(file_leiloes)
-        df_investidores = pd.read_excel(file_investidores)
+        df_leiloes, df_investidores = carregar_dados_excel(
+            file_leiloes, file_investidores
+        )
 
         df_leiloes["norm_cidade"] = df_leiloes["Cidade"].apply(normalize)
         df_leiloes["norm_estado"] = df_leiloes["Estado"].apply(normalize)
@@ -807,7 +725,6 @@ else:
           norm_val = normalize(valor_input)
 
           sub = df_leiloes.copy()
-
           target_cidades = []
           target_estados = []
 
@@ -948,13 +865,12 @@ else:
       except Exception as e:
         st.error(f"Erro ao processar as planilhas: {e}")
 
-  # EXIBIÇÃO DO DASHBOARD E ABAS
+  # EXIBIÇÃO DO DASHBOARD E ABAS COM PROTEÇÃO CONTRA REINÍCIO
   if "df_final" in st.session_state and not st.session_state["df_final"].empty:
     df_base = st.session_state["df_final"]
 
     with st.expander("🔍 **Filtros Avançados de Refinamento**", expanded=True):
       f_col1, f_col2, f_col3 = st.columns([2, 2, 2])
-
       with f_col1:
         max_p = (
             float(df_base["Preço do Leilão (R$)"].max())
@@ -970,7 +886,6 @@ else:
             step=50000.0,
             format="R$ %,.0f",
         )
-
       with f_col2:
         tipos_disponiveis = sorted(df_base["Tipo de Bem"].unique().tolist())
         tipos_selecionados = st.multiselect(
@@ -978,7 +893,6 @@ else:
             options=tipos_disponiveis,
             default=tipos_disponiveis,
         )
-
       with f_col3:
         busca_texto = st.text_input(
             "Buscar Palavra-chave",
@@ -1038,13 +952,14 @@ else:
           else "0",
       )
       inv_sem_imoveis_val = st.session_state.get("investidores_sem_imoveis", 0)
-      kpi3.metric("🔍 Investidores que não acharam imóveis", f"{inv_sem_imoveis_val}")
+      kpi3.metric(
+          "🔍 Investidores que não acharam imóveis", f"{inv_sem_imoveis_val}"
+      )
 
       st.markdown("---")
 
       if not df_filtered.empty:
         g_col1, g_col2 = st.columns(2)
-
         with g_col1:
           st.subheader("🍩 Distribuição por Tipo de Imóvel")
           fig_pie = px.pie(
@@ -1181,13 +1096,11 @@ else:
           and st.session_state["imoveis_selecionados"]
       ):
         df_sel = pd.DataFrame(st.session_state["imoveis_selecionados"])
-
         if st.button("🗑️ Limpar Todos os Selecionados"):
           st.session_state["imoveis_selecionados"] = []
           st.rerun()
 
         st.write(" ")
-
         cols_sel = st.columns(2)
         for idx, row in df_sel.iterrows():
           col_target = cols_sel[idx % 2]
@@ -1196,7 +1109,6 @@ else:
               if str(row["Link do Imóvel"]).startswith("http")
               else "#"
           )
-
           with col_target:
             st.markdown(
                 f"""
@@ -1272,7 +1184,7 @@ else:
 
         @st.fragment
         def renderizar_vitrine_com_paginacao(df_investidor):
-          itens_por_pagina = 50  # Aumentado para 50 imóveis por página com alta performance
+          itens_por_pagina = 20
           total_imoveis = len(df_investidor)
           total_pages = (
               (total_imoveis + itens_por_pagina - 1) // itens_por_pagina
@@ -1304,9 +1216,7 @@ else:
           cols_cards = st.columns(2)
           for idx, (_, row) in enumerate(df_paginado.iterrows()):
             col_target = cols_cards[idx % 2]
-
             badge_html = f'<span class="badge-type">🏠 {row["Tipo de Bem"]}</span>'
-
             preco_card = row["Preço do Leilão (R$)"]
             val_comissao_leiloeiro = preco_card * taxa_leiloeiro
             val_itbi_cartorio = preco_card * taxa_itbi
@@ -1336,7 +1246,6 @@ else:
 
             with col_target:
               st.markdown(badge_html, unsafe_allow_html=True)
-
               st.markdown(
                   f"""
                     <div class="property-card">
@@ -1359,32 +1268,15 @@ else:
                   """
                     <style>
                     div[data-testid="column"] button[kind="secondary"] {
-                        background-color: #0052CC !important;
-                        color: white !important;
-                        border: none !important;
-                        border-radius: 8px !important;
-                        box-shadow: 0 2px 6px rgba(0,0,0,0.1) !important;
-                        font-size: 1.1rem !important;
-                        font-weight: bold !important;
-                        padding: 0.6rem !important;
-                        min-height: 44px !important;
-                        height: 44px !important;
-                        width: 100% !important;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
+                        background-color: #0052CC !important; color: white !important; border: none !important; border-radius: 8px !important; box-shadow: 0 2px 6px rgba(0,0,0,0.1) !important; font-size: 1.1rem !important; font-weight: bold !important; padding: 0.6rem !important; min-height: 44px !important; height: 44px !important; width: 100% !important; display: flex; align-items: center; justify-content: center;
                     }
-                    div[data-testid="column"] button[kind="secondary"]:hover {
-                        background-color: #003D99 !important;
-                        box-shadow: 0 4px 10px rgba(0,0,0,0.15) !important;
-                    }
+                    div[data-testid="column"] button[kind="secondary"]:hover { background-color: #003D99 !important; box-shadow: 0 4px 10px rgba(0,0,0,0.15) !important; }
                     </style>
                     """,
                   unsafe_allow_html=True,
               )
 
               col_b1, col_b2, col_b3 = st.columns(3)
-
               with col_b1:
                 label_estrela = (
                     "⭐ Favoritado" if ja_selecionado else "☆ Favoritar"
