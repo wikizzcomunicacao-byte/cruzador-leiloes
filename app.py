@@ -1282,14 +1282,14 @@ else:
                 st.markdown(f"#### {row['Título do Imóvel']}")
                 st.markdown(f"📍 **{row['Cidade Imóvel']} - {row['Estado Imóvel']}**")
                 
-                st.markdown(f"**Lance Mínimo:** R$ {row['Preço do Leilão (R$)']:,.2f} &nbsp;&nbsp; <span style='color: #9CA3AF; text-decoration: line-through; font-size: 0.9rem;'>Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f}</span>", unsafe_allow_html=True)
+                st.markdown(f"**Lance Mínimo:** R$ {row['Preço do Leilão (R$)']:,.2f} &nbsp;&nbsp; *Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f}*")
                 
                 if preco_mercado_salvo is not None:
-                  st.markdown(f"🌐 **Preço Médio Mercado (API):** <span style='color: #0284C7; font-weight: bold;'>R$ {preco_mercado_salvo:,.2f}</span>", unsafe_allow_html=True)
+                  st.markdown(f"🌐 **Preço Médio Mercado (API):** R$ {preco_mercado_salvo:,.2f}")
                 
-                st.markdown(f"💰 **Lucro Líquido Real:** <span style='color: #2563EB; font-weight: bold;'>R$ {lucro_exibido:,.2f}</span>", unsafe_allow_html=True)
-                st.markdown(f"<span style='color: #64748B; font-size: 0.88rem;'>• Comissão do Leiloeiro: R$ {val_comissao_leiloeiro:,.2f}<br>• ITBI e Cartório: R$ {val_itbi_cartorio:,.2f}<br>🛠️ Custo Total Estimado: R$ {row['Custo Total Estimado (R$)']:,.2f}</span>", unsafe_allow_html=True)
-                st.markdown(f"<span style='font-size: 0.85rem; color: #475569;'><b>Endereço:</b> {row['Endereço']}</span>", unsafe_allow_html=True)
+                st.markdown(f"💰 **Lucro Líquido Real:** R$ {lucro_exibido:,.2f}")
+                st.markdown(f"• Comissão do Leiloeiro: R$ {val_comissao_leiloeiro:,.2f}\n• ITBI e Cartório: R$ {val_itbi_cartorio:,.2f}\n🛠️ **Custo Total Estimado:** R$ {row['Custo Total Estimado (R$)']:,.2f}")
+                st.markdown(f"**Endereço:** {row['Endereço']}")
 
               if preco_mercado_salvo is None:
                 if st.button(
