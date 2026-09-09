@@ -9,6 +9,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 import pandas as pd
 import plotly.express as px
+import requests
 import streamlit as st
 
 # ---------------------------------------------------------
@@ -47,7 +48,6 @@ if "imoveis_selecionados" not in st.session_state:
 @st.cache_data
 def consultar_preco_mercado_gecko(cidade, estado, tipo_bem):
   """Consulta os 3 portais via GeckoAPI em cascata usando st.secrets.
-
   Retorna o preço médio de mercado encontrado na região.
   """
   url = "https://api.geckoapi.com.br/v1/extract"
@@ -231,50 +231,17 @@ else:
     if not isinstance(text, str):
       text = str(text) if text is not None else ""
     replacements = {
-        "á": "a",
-        "à": "a",
-        "â": "a",
-        "ã": "a",
-        "ä": "a",
-        "Á": "A",
-        "À": "A",
-        "Â": "A",
-        "Ã": "A",
-        "é": "e",
-        "è": "e",
-        "ê": "e",
-        "ë": "e",
-        "É": "E",
-        "È": "E",
-        "Ê": "E",
-        "í": "i",
-        "ì": "i",
-        "î": "i",
-        "ï": "i",
-        "Í": "I",
-        "Ì": "I",
-        "Î": "I",
-        "ó": "o",
-        "ò": "o",
-        "ô": "o",
-        "õ": "o",
-        "ö": "o",
-        "Ó": "O",
-        "Ò": "O",
-        "Ô": "O",
-        "Õ": "O",
-        "ú": "u",
-        "ù": "u",
-        "û": "u",
-        "ü": "u",
-        "Ú": "U",
-        "Ù": "U",
-        "Û": "U",
-        "ç": "c",
-        "Ç": "C",
-        "º": "o",
-        "ª": "a",
-        "²": "2",
+        "á": "a", "à": "a", "â": "a", "ã": "a", "ä": "a",
+        "Á": "A", "À": "A", "Â": "A", "Ã": "A",
+        "é": "e", "è": "e", "ê": "e", "ë": "e",
+        "É": "E", "È": "E", "Ê": "E",
+        "í": "i", "ì": "i", "î": "i", "ï": "i",
+        "Í": "I", "Ì": "I", "Î": "I",
+        "ó": "o", "ò": "o", "ô": "o", "õ": "o", "ö": "o",
+        "Ó": "O", "Ò": "O", "Ô": "O", "Õ": "O",
+        "ú": "u", "ù": "u", "û": "u", "ü": "u",
+        "Ú": "U", "Ù": "U", "Û": "U",
+        "ç": "c", "Ç": "C", "º": "o", "ª": "a", "²": "2",
     }
     for k, v in replacements.items():
       text = text.replace(k, v)
@@ -339,12 +306,7 @@ else:
         self.set_text_color(100, 116, 139)
         self.set_xy(45, 10)
         self.cell(
-            0,
-            5,
-            clean_ascii("LOURENCO COLOMBO E ROZANI - ADVOCACIA E LEILOES"),
-            0,
-            1,
-            "L",
+            0, 5, clean_ascii("LOURENCO COLOMBO E ROZANI - ADVOCACIA E LEILOES"), 0, 1, "L"
         )
         self.set_draw_color(226, 232, 240)
         self.line(10, 16, 200, 16)
@@ -354,16 +316,7 @@ else:
       self.set_y(-12)
       self.set_font("Arial", "I", 8)
       self.set_text_color(128, 128, 128)
-      self.cell(
-          0,
-          10,
-          clean_ascii(
-              f"Informativo de Imoveis em Leilao - Pagina {self.page_no()}"
-          ),
-          0,
-          0,
-          "C",
-      )
+      self.cell(0, 10, clean_ascii(f"Informativo de Imoveis em Leilao - Pagina {self.page_no()}"), 0, 0, "C")
 
   def gerar_pdf_informativo(nome_investidor, df_inv):
     pdf = InformativoLeiloesPDF()
@@ -404,14 +357,8 @@ else:
     )
     pdf.ln(15)
 
-    cid_req = (
-        str(df_inv["Cidades Solicitadas"].iloc[0])
-        if not df_inv.empty
-        else "N/A"
-    )
-    faixa_req = (
-        str(df_inv["Faixa Solicitada"].iloc[0]) if not df_inv.empty else "N/A"
-    )
+    cid_req = str(df_inv["Cidades Solicitadas"].iloc[0]) if not df_inv.empty else "N/A"
+    faixa_req = str(df_inv["Faixa Solicitada"].iloc[0]) if not df_inv.empty else "N/A"
 
     pdf.set_fill_color(248, 250, 252)
     pdf.set_draw_color(226, 232, 240)
@@ -429,16 +376,7 @@ else:
       pdf.add_page()
       pdf.set_font("Arial", "B", 11)
       pdf.set_text_color(200, 0, 0)
-      pdf.cell(
-          0,
-          10,
-          clean_ascii(
-              "NÃO EXISTEM OPORTUNIDADES VIÁVEIS NAS REGIÕES SELECIONADAS"
-          ),
-          0,
-          1,
-          "C",
-      )
+      pdf.cell(0, 10, clean_ascii("NÃO EXISTEM OPORTUNIDADES VIÁVEIS NAS REGIÕES SELECIONADAS"), 0, 1, "C")
     else:
       tipos_unicos = df_inv["Tipo de Bem"].unique()
       for tipo in tipos_unicos:
@@ -471,101 +409,35 @@ else:
           current_y = pdf.get_y() + 1
 
           pdf.set_xy(col1_x, current_y)
-          pdf.cell(
-              60, 4, clean_ascii(f"Matrícula: {row.get('Matrícula', 'N/I')}"), 0, 0
-          )
+          pdf.cell(60, 4, clean_ascii(f"Matrícula: {row.get('Matrícula', 'N/I')}"), 0, 0)
           pdf.set_xy(col2_x, current_y)
-          pdf.cell(
-              60,
-              4,
-              clean_ascii(
-                  f"Valor Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f}"
-              ),
-              0,
-              0,
-          )
+          pdf.cell(60, 4, clean_ascii(f"Valor Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f}"), 0, 0)
           pdf.set_xy(col3_x, current_y)
-          pdf.cell(
-              60,
-              4,
-              clean_ascii(
-                  f"Instituição: {row.get('Instituição', 'Judicial/Caixa')}"
-              ),
-              0,
-              1,
-          )
+          pdf.cell(60, 4, clean_ascii(f"Instituição: {row.get('Instituição', 'Judicial/Caixa')}"), 0, 1)
 
           current_y += 4.5
           pdf.set_xy(col1_x, current_y)
-          pdf.cell(
-              60,
-              4,
-              clean_ascii(
-                  f"Área do Terreno: {row.get('Área do Terreno', 'N/I')} m²"
-              ),
-              0,
-              0,
-          )
+          pdf.cell(60, 4, clean_ascii(f"Área do Terreno: {row.get('Área do Terreno', 'N/I')} m²"), 0, 0)
           pdf.set_xy(col2_x, current_y)
-          pdf.cell(
-              60,
-              4,
-              clean_ascii(
-                  f"Lance Mínimo: R$ {row['Preço do Leilão (R$)']:,.2f}"
-              ),
-              0,
-              0,
-          )
+          pdf.cell(60, 4, clean_ascii(f"Lance Mínimo: R$ {row['Preço do Leilão (R$)']:,.2f}"), 0, 0)
           pdf.set_xy(col3_x, current_y)
-          pdf.cell(
-              60,
-              4,
-              clean_ascii(f"Modalidade: {row.get('Modalidade', 'Leilão')}"),
-              0,
-              1,
-          )
+          pdf.cell(60, 4, clean_ascii(f"Modalidade: {row.get('Modalidade', 'Leilão')}"), 0, 1)
 
           current_y += 4.5
           pdf.set_xy(col1_x, current_y)
-          pdf.cell(
-              60,
-              4,
-              clean_ascii(
-                  f"Custo Total: R$ {row['Custo Total Estimado (R$)']:,.2f}"
-              ),
-              0,
-              0,
-          )
+          pdf.cell(60, 4, clean_ascii(f"Custo Total: R$ {row['Custo Total Estimado (R$)']:,.2f}"), 0, 0)
           pdf.set_xy(col2_x, current_y)
           pdf.set_font("Arial", "B", 8)
           pdf.set_text_color(30, 130, 50)
-          pdf.cell(
-              60,
-              4,
-              clean_ascii(
-                  f"Lucro Líquido: R$ {row['Lucro Líquido Real (R$)']:,.2f}"
-              ),
-              0,
-              0,
-          )
+          pdf.cell(60, 4, clean_ascii(f"Lucro Líquido: R$ {row['Lucro Líquido Real (R$)']:,.2f}"), 0, 0)
           pdf.set_font("Arial", "", 8)
           pdf.set_text_color(50, 60, 75)
           pdf.set_xy(col3_x, current_y)
-          pdf.cell(
-              60,
-              4,
-              clean_ascii(
-                  f"Pagamento: {row.get('Condições de Pagamento', 'À vista')}"
-              ),
-              0,
-              1,
-          )
+          pdf.cell(60, 4, clean_ascii(f"Pagamento: {row.get('Condições de Pagamento', 'À vista')}"), 0, 1)
 
           current_y += 5
           pdf.set_xy(col1_x, current_y)
-          endereco_completo = clean_ascii(
-              f"Endereço: {row['Endereço']} - {row['Cidade Imóvel']}/{row['Estado Imóvel']}"
-          )
+          endereco_completo = clean_ascii(f"Endereço: {row['Endereço']} - {row['Cidade Imóvel']}/{row['Estado Imóvel']}")
           pdf.cell(180, 4, endereco_completo[:105], 0, 1)
 
           current_y += 4.5
@@ -574,14 +446,8 @@ else:
           pdf.set_text_color(0, 82, 204)
           link_anuncio = str(row["Link do Imóvel"])
           pdf.cell(
-              180,
-              4,
-              clean_ascii(f"Acesse o Link: {link_anuncio}"),
-              0,
-              1,
-              link=(
-                  link_anuncio if link_anuncio.startswith("http") else None
-              ),
+              180, 4, clean_ascii(f"Acesse o Link: {link_anuncio}"), 0, 1,
+              link=(link_anuncio if link_anuncio.startswith("http") else None)
           )
           pdf.ln(6)
 
@@ -595,9 +461,7 @@ else:
     df_export = df_input.copy()
     if "Link do Imóvel" in df_export.columns:
       df_export["Link do Imóvel"] = df_export["Link do Imóvel"].apply(
-          lambda x: f'=HYPERLINK("{x}", "🔗 Ver Anúncio")'
-          if pd.notnull(x) and str(x).startswith("http")
-          else x
+          lambda x: f'=HYPERLINK("{x}", "🔗 Ver Anúncio")' if pd.notnull(x) and str(x).startswith("http") else x
       )
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
       df_export.to_excel(writer, index=False, sheet_name="Oportunidades")
@@ -607,12 +471,8 @@ else:
       ws.auto_filter.ref = ws.dimensions
 
       font_header = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
-      fill_header = PatternFill(
-          start_color="0052CC", end_color="0052CC", fill_type="solid"
-      )
-      font_link = Font(
-          name="Calibri", size=11, color="0066CC", underline="single"
-      )
+      fill_header = PatternFill(start_color="0052CC", end_color="0052CC", fill_type="solid")
+      font_link = Font(name="Calibri", size=11, color="0066CC", underline="single")
       align_center = Alignment(horizontal="center", vertical="center")
       align_right = Alignment(horizontal="right", vertical="center")
       align_left = Alignment(horizontal="left", vertical="center")
@@ -626,12 +486,7 @@ else:
       for col_idx, col_name in enumerate(col_names, start=1):
         col_letter = get_column_letter(col_idx)
         cells = ws[col_letter][1:]
-        if (
-            "Preço" in str(col_name)
-            or "Avaliação" in str(col_name)
-            or "Lucro" in str(col_name)
-            or "Custo" in str(col_name)
-        ):
+        if ("Preço" in str(col_name) or "Avaliação" in str(col_name) or "Lucro" in str(col_name) or "Custo" in str(col_name)):
           for c in cells:
             c.number_format = "R$ #,##0.00"
             c.alignment = align_right
@@ -651,21 +506,11 @@ else:
             c.alignment = align_left
 
       col_widths = {
-          "ID Investidor": 14,
-          "Nome do Investidor": 25,
-          "Cidades Solicitadas": 25,
-          "Faixa Solicitada": 22,
-          "Título do Imóvel": 40,
-          "Cidade Imóvel": 20,
-          "Estado Imóvel": 14,
-          "Tipo de Bem": 16,
-          "Preço do Leilão (R$)": 22,
-          "Valor de Avaliação (R$)": 24,
-          "Desconto (%)": 15,
-          "Custo Total Estimado (R$)": 24,
-          "Lucro Líquido Real (R$)": 22,
-          "Endereço": 45,
-          "Link do Imóvel": 18,
+          "ID Investidor": 14, "Nome do Investidor": 25, "Cidades Solicitadas": 25,
+          "Faixa Solicitada": 22, "Título do Imóvel": 40, "Cidade Imóvel": 20,
+          "Estado Imóvel": 14, "Tipo de Bem": 16, "Preço do Leilão (R$)": 22,
+          "Valor de Avaliação (R$)": 24, "Desconto (%)": 15, "Custo Total Estimado (R$)": 24,
+          "Lucro Líquido Real (R$)": 22, "Endereço": 45, "Link do Imóvel": 18,
       }
       for col_idx, col_name in enumerate(col_names, start=1):
         col_letter = get_column_letter(col_idx)
@@ -675,10 +520,7 @@ else:
   col_head1, col_head2 = st.columns([4, 1])
   with col_head1:
     st.title("🎯 Cruzador Automático de Leilões & Inteligência")
-    st.markdown(
-        "Cruzamento inteligente entre o perfil dos investidores, oportunidades"
-        " em leilão e dados de mercado."
-    )
+    st.markdown("Cruzamento inteligente entre o perfil dos investidores, oportunidades em leilão e dados de mercado.")
   with col_head2:
     st.write(" ")
     with st.popover("❓ Como Usar"):
@@ -696,33 +538,21 @@ else:
     st.subheader("📂 Central de Envio e Parâmetros")
     up_col1, up_col2, up_col3 = st.columns([1.5, 1.5, 1])
     with up_col1:
-      file_leiloes = st.file_uploader(
-          "1️⃣ Base de Leilões (.xlsx)", type=["xlsx", "xls"]
-      )
+      file_leiloes = st.file_uploader("1️⃣ Base de Leilões (.xlsx)", type=["xlsx", "xls"])
     with up_col2:
-      file_investidores = st.file_uploader(
-          "2️⃣ Base de Investidores (.xlsx)", type=["xlsx", "xls"]
-      )
+      file_investidores = st.file_uploader("2️⃣ Base de Investidores (.xlsx)", type=["xlsx", "xls"])
     with up_col3:
       st.write("⚙️ **Custos Ocultos**")
-      taxa_leiloeiro = (
-          st.number_input("Comissão Leiloeiro (%)", 0.0, 10.0, 5.0, 0.5) / 100.0
-      )
-      taxa_itbi = (
-          st.number_input("ITBI / Registro (%)", 0.0, 10.0, 3.0, 0.5) / 100.0
-      )
+      taxa_leiloeiro = st.number_input("Comissão Leiloeiro (%)", 0.0, 10.0, 5.0, 0.5) / 100.0
+      taxa_itbi = st.number_input("ITBI / Registro (%)", 0.0, 10.0, 3.0, 0.5) / 100.0
 
     st.write(" ")
-    executar = st.button(
-        "🚀 Processar Oportunidades e Cruzar Dados", type="primary"
-    )
+    executar = st.button("🚀 Processar Oportunidades e Cruzar Dados", type="primary")
 
   st.divider()
 
   if file_leiloes and file_investidores and executar:
-    with st.spinner(
-        "Analisando critérios, cruzando bases e consultando dados de mercado..."
-    ):
+    with st.spinner("Analisando critérios, cruzando bases e consultando dados de mercado..."):
       try:
         df_leiloes = pd.read_excel(file_leiloes)
         df_investidores = pd.read_excel(file_investidores)
@@ -733,25 +563,13 @@ else:
 
         df_leiloes["preco_effective"] = df_leiloes.apply(
             lambda r: (
-                r["2º Leilão (Preço)"]
-                if pd.notnull(r["2º Leilão (Preço)"])
-                and r["2º Leilão (Preço)"] > 0
-                else r["1º Leilão (Preço)"]
-            ),
-            axis=1,
+                r["2º Leilão (Preço)"] if pd.notnull(r["2º Leilão (Preço)"]) and r["2º Leilão (Preço)"] > 0 else r["1º Leilão (Preço)"]
+            ), axis=1,
         )
 
         df_leiloes["desconto_%"] = np.where(
-            (pd.notnull(df_leiloes["Valor de Avaliação do Leiloeiro"]))
-            & (df_leiloes["Valor de Avaliação do Leiloeiro"] > 0)
-            & (pd.notnull(df_leiloes["preco_effective"]))
-            & (df_leiloes["preco_effective"] > 0),
-            ((
-                df_leiloes["Valor de Avaliação do Leiloeiro"]
-                - df_leiloes["preco_effective"]
-            )
-            / df_leiloes["Valor de Avaliação do Leiloeiro"])
-            * 100,
+            (pd.notnull(df_leiloes["Valor de Avaliação do Leiloeiro"])) & (df_leiloes["Valor de Avaliação do Leiloeiro"] > 0) & (pd.notnull(df_leiloes["preco_effective"])) & (df_leiloes["preco_effective"] > 0),
+            ((df_leiloes["Valor de Avaliação do Leiloeiro"] - df_leiloes["preco_effective"]) / df_leiloes["Valor de Avaliação do Leiloeiro"]) * 100,
             0,
         )
 
@@ -774,15 +592,7 @@ else:
           target_cidades = []
           target_estados = []
 
-          if any(
-              w in norm_cid or w in norm_cons
-              for w in [
-                  "rio preto",
-                  "sao jose do rio preto",
-                  "sao jose do preto",
-                  "sjrp",
-              ]
-          ):
+          if any(w in norm_cid or w in norm_cons for w in ["rio preto", "sao jose do rio preto", "sao jose do preto", "sjrp"]):
             target_cidades.append("sao jose do rio preto")
           if "bady" in norm_cid or "bady" in norm_cons:
             target_cidades.append("bady bassitt")
@@ -795,17 +605,10 @@ else:
           if "sao caetano" in norm_cid or "sao caetano" in norm_cons:
             target_cidades.append("sao caetano do sul")
           if "abc" in norm_cid or "abc" in norm_cons:
-            target_cidades.extend(
-                ["santo andre", "sao bernardo do campo", "sao caetano do sul"]
-            )
+            target_cidades.extend(["santo andre", "sao bernardo do campo", "sao caetano do sul"])
           if "sao paulo" in norm_cid or "sao paulo" in norm_cons:
             if "grande sao paulo" in norm_cid or "grande sao paulo" in norm_cons:
-              target_cidades.extend([
-                  "sao paulo",
-                  "santo andre",
-                  "sao bernardo do campo",
-                  "sao caetano do sul",
-              ])
+              target_cidades.extend(["sao paulo", "santo andre", "sao bernardo do campo", "sao caetano do sul"])
             elif "estado de sp" in norm_cid or "estado de sp" in norm_cons:
               target_estados.append("sao paulo")
             else:
@@ -844,31 +647,17 @@ else:
             sub = sub[sub["Tipo de Bem"].isin(allowed_types)]
 
           min_v, max_v = parse_budget(valor_input)
-          if any(
-              p in norm_cons or p in norm_val
-              for p in [
-                  "qualquer valor",
-                  "valores menores",
-                  "100 a 500",
-                  "todos os valores",
-                  "qualquer",
-              ]
-          ):
+          if any(p in norm_cons or p in norm_val for p in ["qualquer valor", "valores menores", "100 a 500", "todos os valores", "qualquer"]):
             min_v, max_v = 0, 999999999
 
           if min_v > 0 and max_v < 999999999:
-            sub = sub[
-                (sub["preco_effective"] >= min_v)
-                & (sub["preco_effective"] <= max_v)
-            ]
+            sub = sub[(sub["preco_effective"] >= min_v) & (sub["preco_effective"] <= max_v)]
           elif min_v > 0:
             sub = sub[sub["preco_effective"] >= min_v]
           elif max_v < 999999999:
             sub = sub[sub["preco_effective"] <= max_v]
 
-          sub_sorted = sub.sort_values(
-              by=["desconto_%", "preco_effective"], ascending=[False, True]
-          )
+          sub_sorted = sub.sort_values(by=["desconto_%", "preco_effective"], ascending=[False, True])
 
           if sub_sorted.empty:
             investidores_sem_imoveis += 1
@@ -877,26 +666,12 @@ else:
             preco = imovel["preco_effective"]
             avaliac = imovel["Valor de Avaliação do Leiloeiro"]
 
-            # Consulta inteligente via API (GeckoAPI) para buscar preço médio de mercado da região
-            preco_mercado_api = consultar_preco_mercado_gecko(
-                str(imovel["Cidade"]),
-                str(imovel["Estado"]),
-                str(imovel["Tipo de Bem"]),
-            )
-            # Se a API retornar um preço de mercado válido, usamos ele como base de avaliação opcional
-            valor_referencia = (
-                preco_mercado_api
-                if (preco_mercado_api and preco_mercado_api > 0)
-                else avaliac
-            )
+            preco_mercado_api = consultar_preco_mercado_gecko(str(imovel["Cidade"]), str(imovel["Estado"]), str(imovel["Tipo de Bem"]))
+            valor_referencia = preco_mercado_api if (preco_mercado_api and preco_mercado_api > 0) else avaliac
 
             custos_adicionais = (preco * taxa_leiloeiro) + (preco * taxa_itbi)
             custo_total = preco + custos_adicionais
-            lucro_liquido = (
-                valor_referencia - custo_total
-                if pd.notnull(valor_referencia) and pd.notnull(preco)
-                else 0
-            )
+            lucro_liquido = valor_referencia - custo_total if pd.notnull(valor_referencia) and pd.notnull(preco) else 0
 
             resultados.append({
                 "ID Investidor": idx + 1,
@@ -909,11 +684,7 @@ else:
                 "Tipo de Bem": imovel["Tipo de Bem"],
                 "Preço do Leilão (R$)": preco,
                 "Valor de Avaliação (R$)": avaliac,
-                "Preço Médio Mercado (API)": (
-                    round(preco_mercado_api, 2)
-                    if preco_mercado_api
-                    else avaliac
-                ),
+                "Preço Médio Mercado (API)": round(preco_mercado_api, 2) if preco_mercado_api else avaliac,
                 "Desconto (%)": round(imovel["desconto_%"], 2),
                 "Custo Total Estimado (R$)": round(custo_total, 2),
                 "Lucro Líquido Real (R$)": round(lucro_liquido, 2),
@@ -924,10 +695,7 @@ else:
         st.session_state["df_final"] = pd.DataFrame(resultados)
         st.session_state["investidores_sem_imoveis"] = investidores_sem_imoveis
         st.session_state["imoveis_selecionados"] = []
-        st.toast(
-            "✅ Processamento Enterprise & Inteligência de Mercado concluído!",
-            icon="🎉",
-        )
+        st.toast("✅ Processamento Enterprise & Inteligência de Mercado concluído!", icon="🎉")
 
       except Exception as e:
         st.error(f"Erro ao processar as planilhas: {e}")
@@ -939,31 +707,14 @@ else:
     with st.expander("🔍 **Filtros Avançados de Refinamento**", expanded=True):
       f_col1, f_col2, f_col3 = st.columns([2, 2, 2])
       with f_col1:
-        max_p = (
-            float(df_base["Preço do Leilão (R$)"].max())
-            if not df_base.empty
-            else 5000000.0
-        )
+        max_p = float(df_base["Preço do Leilão (R$)"].max()) if not df_base.empty else 5000000.0
         limite_slider = max(max_p, 100000000.0)
-        faixa_preco = st.slider(
-            "Faixa de Preço do Leilão (R$)",
-            min_value=0.0,
-            max_value=limite_slider,
-            value=(0.0, limite_slider),
-            step=50000.0,
-            format="R$ %,.0f",
-        )
+        faixa_preco = st.slider("Faixa de Preço do Leilão (R$)", min_value=0.0, max_value=limite_slider, value=(0.0, limite_slider), step=50000.0, format="R$ %,.0f")
       with f_col2:
         tipos_disponiveis = sorted(df_base["Tipo de Bem"].unique().tolist())
-        tipos_selecionados = st.multiselect(
-            "Tipo de Bem", options=tipos_disponiveis, default=tipos_disponiveis
-        )
+        tipos_selecionados = st.multiselect("Tipo de Bem", options=tipos_disponiveis, default=tipos_disponiveis)
       with f_col3:
-        busca_texto = st.text_input(
-            "Buscar Palavra-chave",
-            value="",
-            placeholder="Ex: Rio Preto, Simonetti, Casa...",
-        )
+        busca_texto = st.text_input("Buscar Palavra-chave", value="", placeholder="Ex: Rio Preto, Simonetti, Casa...")
 
     df_filtered = df_base[
         (df_base["Preço do Leilão (R$)"] >= faixa_preco[0])
@@ -975,17 +726,11 @@ else:
       termo = normalize(busca_texto)
       df_filtered = df_filtered[
           df_filtered["Cidade Imóvel"].apply(normalize).str.contains(termo)
-          | df_filtered["Nome do Investidor"]
-          .apply(normalize)
-          .str.contains(termo)
+          | df_filtered["Nome do Investidor"].apply(normalize).str.contains(termo)
           | df_filtered["Título do Imóvel"].apply(normalize).str.contains(termo)
       ]
 
-    num_sel = (
-        len(st.session_state["imoveis_selecionados"])
-        if "imoveis_selecionados" in st.session_state
-        else 0
-    )
+    num_sel = len(st.session_state["imoveis_selecionados"]) if "imoveis_selecionados" in st.session_state else 0
 
     tab_labels = (
         [
@@ -993,6 +738,7 @@ else:
             "📋 Tabela de Oportunidades",
             f"⭐ Selecionados ({num_sel})",
             "👤 Vitrine / Cards por Investidor",
+            "🔍 Consulta de Preço de Mercado",
         ]
         if is_tester
         else [
@@ -1000,26 +746,20 @@ else:
             "📋 Tabela de Oportunidades & Download",
             f"⭐ Selecionados ({num_sel})",
             "👤 Vitrine / Cards por Investidor (PDF / WhatsApp)",
+            "🔍 Consulta de Preço de Mercado",
         ]
     )
 
     tabs = st.tabs(tab_labels)
-    tab1, tab2, tab3, tab4 = tabs[0], tabs[1], tabs[2], tabs[3]
+    tab1, tab2, tab3, tab4, tab_consulta_mercado = tabs[0], tabs[1], tabs[2], tabs[3], tabs[4]
 
     with tab1:
       st.write(" ")
       kpi1, kpi2, kpi3 = st.columns(3)
       kpi1.metric("🏢 Total Imóveis", f"{len(df_filtered):,}")
-      kpi2.metric(
-          "👥 Investidores",
-          f"{df_filtered['Nome do Investidor'].nunique()}"
-          if not df_filtered.empty
-          else "0",
-      )
+      kpi2.metric("👥 Investidores", f"{df_filtered['Nome do Investidor'].nunique()}" if not df_filtered.empty else "0")
       inv_sem_imoveis_val = st.session_state.get("investidores_sem_imoveis", 0)
-      kpi3.metric(
-          "🔍 Investidores que não acharam imóveis", f"{inv_sem_imoveis_val}"
-      )
+      kpi3.metric("🔍 Investidores que não acharam imóveis", f"{inv_sem_imoveis_val}")
 
       st.markdown("---")
 
@@ -1027,37 +767,16 @@ else:
         g_col1, g_col2 = st.columns(2)
         with g_col1:
           st.subheader("🍩 Distribuição por Tipo de Imóvel")
-          fig_pie = px.pie(
-              df_filtered,
-              names="Tipo de Bem",
-              hole=0.4,
-              color_discrete_sequence=px.colors.qualitative.Bold,
-          )
+          fig_pie = px.pie(df_filtered, names="Tipo de Bem", hole=0.4, color_discrete_sequence=px.colors.qualitative.Bold)
           fig_pie.update_layout(margin=dict(t=20, b=20, l=10, r=10), height=320)
           st.plotly_chart(fig_pie, use_container_width=True)
 
         with g_col2:
           st.subheader("📍 Top 5 Cidades com Mais Oportunidades")
-          top_cidades = (
-              df_filtered["Cidade Imóvel"]
-              .value_counts()
-              .head(5)
-              .reset_index()
-          )
+          top_cidades = df_filtered["Cidade Imóvel"].value_counts().head(5).reset_index()
           top_cidades.columns = ["Cidade", "Total"]
-          fig_bar = px.bar(
-              top_cidades,
-              x="Total",
-              y="Cidade",
-              orientation="h",
-              text="Total",
-              color_discrete_sequence=["#0052CC"],
-          )
-          fig_bar.update_layout(
-              margin=dict(t=20, b=20, l=10, r=10),
-              height=320,
-              yaxis={"categoryorder": "total ascending"},
-          )
+          fig_bar = px.bar(top_cidades, x="Total", y="Cidade", orientation="h", text="Total", color_discrete_sequence=["#0052CC"])
+          fig_bar.update_layout(margin=dict(t=20, b=20, l=10, r=10), height=320, yaxis={"categoryorder": "total ascending"})
           st.plotly_chart(fig_bar, use_container_width=True)
 
     with tab2:
@@ -1070,99 +789,53 @@ else:
           if not is_tester:
             excel_bytes = gerar_excel_profissional(df_filtered)
             st.download_button(
-                label="📥 Baixar Excel Formatado",
-                data=excel_bytes,
-                file_name="cruzamento_leiloes_investidores.xlsx",
-                mime=(
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                ),
-                use_container_width=True,
+                label="📥 Baixar Excel Formatado", data=excel_bytes, file_name="cruzamento_leiloes_investidores.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True,
             )
           else:
             st.info("🔒 Download em Excel restrito no modo de teste.")
 
         st.dataframe(
-            df_filtered,
-            use_container_width=True,
-            height=500,
+            df_filtered, use_container_width=True, height=500,
             column_config={
-                "Link do Imóvel": st.column_config.LinkColumn(
-                    "Anúncio Oficial", display_text="🔗 Ver Imóvel"
-                ),
-                "Preço do Leilão (R$)": st.column_config.NumberColumn(
-                    "Preço Leilão", format="R$ %,.2f"
-                ),
-                "Valor de Avaliação (R$)": st.column_config.NumberColumn(
-                    "Valor Avaliação", format="R$ %,.2f"
-                ),
-                "Preço Médio Mercado (API)": st.column_config.NumberColumn(
-                    "Mercado (API)", format="R$ %,.2f"
-                ),
-                "Custo Total Estimado (R$)": st.column_config.NumberColumn(
-                    "Custo Total", format="R$ %,.2f"
-                ),
-                "Lucro Líquido Real (R$)": st.column_config.NumberColumn(
-                    "Lucro Líquido Real", format="R$ %,.2f"
-                ),
-                "Desconto (%)": st.column_config.ProgressColumn(
-                    "Desconto (%)", format="%.1f%%", min_value=0, max_value=100
-                ),
+                "Link do Imóvel": st.column_config.LinkColumn("Anúncio Oficial", display_text="🔗 Ver Imóvel"),
+                "Preço do Leilão (R$)": st.column_config.NumberColumn("Preço Leilão", format="R$ %,.2f"),
+                "Valor de Avaliação (R$)": st.column_config.NumberColumn("Valor Avaliação", format="R$ %,.2f"),
+                "Preço Médio Mercado (API)": st.column_config.NumberColumn("Mercado (API)", format="R$ %,.2f"),
+                "Custo Total Estimado (R$)": st.column_config.NumberColumn("Custo Total", format="R$ %,.2f"),
+                "Lucro Líquido Real (R$)": st.column_config.NumberColumn("Lucro Líquido Real", format="R$ %,.2f"),
+                "Desconto (%)": st.column_config.ProgressColumn("Desconto (%)", format="%.1f%%", min_value=0, max_value=100),
             },
         )
       else:
-        st.warning(
-            "Nenhum imóvel encontrado com os filtros selecionados acima."
-        )
+        st.warning("Nenhum imóvel encontrado com os filtros selecionados acima.")
 
     with tab3:
       st.write(" ")
       s_col1, s_col2, s_col3 = st.columns([2, 1.5, 1.5])
       with s_col1:
         st.subheader("⭐ Seus Imóveis Escolhidos / Selecionados")
-        st.markdown(
-            "Aqui estão reunidos todos os imóveis que você marcou na vitrine."
-        )
+        st.markdown("Aqui estão reunidos todos os imóveis que você marcou na vitrine.")
       with s_col2:
-        if (
-            "imoveis_selecionados" in st.session_state
-            and st.session_state["imoveis_selecionados"]
-            and not is_tester
-        ):
+        if "imoveis_selecionados" in st.session_state and st.session_state["imoveis_selecionados"] and not is_tester:
           st.write(" ")
           df_sel_exp = pd.DataFrame(st.session_state["imoveis_selecionados"])
           excel_sel_bytes = gerar_excel_profissional(df_sel_exp)
           st.download_button(
-              label="📥 Baixar Excel Selecionados",
-              data=excel_sel_bytes,
-              file_name="imoveis_selecionados.xlsx",
-              mime=(
-                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-              ),
-              use_container_width=True,
+              label="📥 Baixar Excel Selecionados", data=excel_sel_bytes, file_name="imoveis_selecionados.xlsx",
+              mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True,
           )
       with s_col3:
-        if (
-            "imoveis_selecionados" in st.session_state
-            and st.session_state["imoveis_selecionados"]
-            and not is_tester
-        ):
+        if "imoveis_selecionados" in st.session_state and st.session_state["imoveis_selecionados"] and not is_tester:
           st.write(" ")
           df_sel_exp = pd.DataFrame(st.session_state["imoveis_selecionados"])
-          pdf_sel_bytes = gerar_pdf_informativo(
-              "Imóveis Selecionados", df_sel_exp
-          )
+          pdf_sel_bytes = gerar_pdf_informativo("Imóveis Selecionados", df_sel_exp)
           st.download_button(
-              label="📄 Baixar PDF Informativo",
-              data=pdf_sel_bytes,
-              file_name="informativo_selecionados.pdf",
-              mime="application/pdf",
-              use_container_width=True,
+              label="📄 Baixar PDF Informativo", data=pdf_sel_bytes, file_name="informativo_selecionados.pdf",
+              mime="application/pdf", use_container_width=True,
           )
 
-      if (
-          "imoveis_selecionados" in st.session_state
-          and st.session_state["imoveis_selecionados"]
-      ):
+      if "imoveis_selecionados" in st.session_state and st.session_state["imoveis_selecionados"]:
         df_sel = pd.DataFrame(st.session_state["imoveis_selecionados"])
         if st.button("🗑️ Limpar Todos os Selecionados"):
           st.session_state["imoveis_selecionados"] = []
@@ -1172,11 +845,7 @@ else:
         cols_sel = st.columns(2)
         for idx, row in df_sel.iterrows():
           col_target = cols_sel[idx % 2]
-          link_url = (
-              row["Link do Imóvel"]
-              if str(row["Link do Imóvel"]).startswith("http")
-              else "#"
-          )
+          link_url = row["Link do Imóvel"] if str(row["Link do Imóvel"]).startswith("http") else "#"
           with col_target:
             st.markdown(
                 f"""
@@ -1200,73 +869,42 @@ else:
                 unsafe_allow_html=True,
             )
       else:
-        st.info(
-            "💡 Nenhum imóvel foi selecionado ainda. Vá até a aba **👤 Vitrine /"
-            " Cards por Investidor** e clique na estrela nos cards que desejar."
-        )
+        st.info("💡 Nenhum imóvel foi selecionado ainda. Vá até a aba **👤 Vitrine / Cards por Investidor** e clique na estrela nos cards que desejar.")
 
     with tab4:
       st.write(" ")
       if not df_filtered.empty:
-        investidores_lista = sorted(
-            df_filtered["Nome do Investidor"].unique().tolist()
-        )
+        investidores_lista = sorted(df_filtered["Nome do Investidor"].unique().tolist())
 
         c_sel1, c_sel2 = st.columns([2, 1])
         with c_sel1:
-          investidor_sel = st.selectbox(
-              "👤 Selecione o Investidor:",
-              options=investidores_lista,
-              key="select_inv_vitrine",
-          )
+          investidor_sel = st.selectbox("👤 Selecione o Investidor:", options=investidores_lista, key="select_inv_vitrine")
         with c_sel2:
           st.write(" ")
-          df_inv_curr = df_filtered[
-              df_filtered["Nome do Investidor"] == investidor_sel
-          ]
+          df_inv_curr = df_filtered[df_filtered["Nome do Investidor"] == investidor_sel]
           if not df_inv_curr.empty:
             if not is_tester:
               pdf_bytes = gerar_pdf_informativo(investidor_sel, df_inv_curr)
               st.download_button(
-                  label="📄 Baixar PDF Informativo",
-                  data=pdf_bytes,
-                  file_name=(
-                      f"informativo_{normalize(investidor_sel).replace(' ', '_')}.pdf"
-                  ),
-                  mime="application/pdf",
-                  use_container_width=True,
+                  label="📄 Baixar PDF Informativo", data=pdf_bytes, file_name=f"informativo_{normalize(investidor_sel).replace(' ', '_')}.pdf",
+                  mime="application/pdf", use_container_width=True,
               )
             else:
               st.info("🔒 PDF restrito.")
 
         df_inv = df_filtered[df_filtered["Nome do Investidor"] == investidor_sel]
-
         st.markdown(f"### 🎯 Vitrine Exclusiva: **{investidor_sel}**")
-        st.caption(
-            f"Preferências solicitadas: {df_inv['Cidades Solicitadas'].iloc[0]}"
-            f" | Faixa: {df_inv['Faixa Solicitada'].iloc[0]}"
-        )
-
+        st.caption(f"Preferências solicitadas: {df_inv['Cidades Solicitadas'].iloc[0]} | Faixa: {df_inv['Faixa Solicitada'].iloc[0]}")
         st.write(" ")
 
         @st.fragment
         def renderizar_vitrine_com_paginacao(df_investidor):
           itens_por_pagina = 20
           total_imoveis = len(df_investidor)
-          total_pages = (
-              (total_imoveis + itens_por_pagina - 1) // itens_por_pagina
-              if total_imoveis > 0
-              else 1
-          )
+          total_pages = (total_imoveis + itens_por_pagina - 1) // itens_por_pagina if total_imoveis > 0 else 1
 
           if total_pages > 1:
-            pagina_atual = st.number_input(
-                "📄 Página de Cards",
-                min_value=1,
-                max_value=total_pages,
-                step=1,
-                key="pag_cards_fragment",
-            )
+            pagina_atual = st.number_input("📄 Página de Cards", min_value=1, max_value=total_pages, step=1, key="pag_cards_fragment")
           else:
             pagina_atual = 1
 
@@ -1274,11 +912,7 @@ else:
           end_idx = start_idx + itens_por_pagina
           df_paginado = df_investidor.iloc[start_idx:end_idx]
 
-          st.caption(
-              f"Mostrando imóveis {start_idx + 1} a"
-              f" {min(end_idx, total_imoveis)} de {total_imoveis} para este"
-              " investidor."
-          )
+          st.caption(f"Mostrando imóveis {start_idx + 1} a {min(end_idx, total_imoveis)} de {total_imoveis} para este investidor.")
 
           cols_cards = st.columns(2)
           for idx, (_, row) in enumerate(df_paginado.iterrows()):
@@ -1287,16 +921,10 @@ else:
             preco_card = row["Preço do Leilão (R$)"]
             val_comissao_leiloeiro = preco_card * taxa_leiloeiro
             val_itbi_cartorio = preco_card * taxa_itbi
-
-            link_url = (
-                row["Link do Imóvel"]
-                if str(row["Link do Imóvel"]).startswith("http")
-                else "#"
-            )
+            link_url = row["Link do Imóvel"] if str(row["Link do Imóvel"]).startswith("http") else "#"
 
             ja_selecionado = any(
-                item["Título do Imóvel"] == row["Título do Imóvel"]
-                and item["Nome do Investidor"] == row["Nome do Investidor"]
+                item["Título do Imóvel"] == row["Título do Imóvel"] and item["Nome do Investidor"] == row["Nome do Investidor"]
                 for item in st.session_state["imoveis_selecionados"]
             )
 
@@ -1332,7 +960,6 @@ else:
                         """,
                   unsafe_allow_html=True,
               )
-
               st.markdown(
                   """
                     <style>
@@ -1344,32 +971,17 @@ else:
                     """,
                   unsafe_allow_html=True,
               )
-
               col_b1, col_b2, col_b3 = st.columns(3)
               with col_b1:
-                label_estrela = (
-                    "⭐ Favoritado" if ja_selecionado else "☆ Favoritar"
-                )
-                if st.button(
-                    label_estrela,
-                    key=f"btn_estrela_{idx}_{row['Título do Imóvel']}",
-                    use_container_width=True,
-                ):
+                label_estrela = "⭐ Favoritado" if ja_selecionado else "☆ Favoritar"
+                if st.button(label_estrela, key=f"btn_estrela_{idx}_{row['Título do Imóvel']}", use_container_width=True):
                   if ja_selecionado:
                     st.session_state["imoveis_selecionados"] = [
-                        item
-                        for item in st.session_state["imoveis_selecionados"]
-                        if not (
-                            item["Título do Imóvel"] == row["Título do Imóvel"]
-                            and item["Nome do Investidor"]
-                            == row["Nome do Investidor"]
-                        )
+                        item for item in st.session_state["imoveis_selecionados"]
+                        if not (item["Título do Imóvel"] == row["Título do Imóvel"] and item["Nome do Investidor"] == row["Nome do Investidor"])
                     ]
                   else:
-                    st.session_state["imoveis_selecionados"].append(
-                        row.to_dict()
-                    )
-
+                    st.session_state["imoveis_selecionados"].append(row.to_dict())
               with col_b2:
                 st.markdown(
                     f"""
@@ -1379,7 +991,6 @@ else:
                         """,
                     unsafe_allow_html=True,
                 )
-
               with col_b3:
                 st.markdown(
                     f"""
@@ -1389,14 +1000,82 @@ else:
                         """,
                     unsafe_allow_html=True,
                 )
-
               st.write("<br>", unsafe_allow_html=True)
 
         renderizar_vitrine_com_paginacao(df_inv)
 
+    with tab_consulta_mercado:
+      st.subheader("🔍 Painel de Consulta Manual - GeckoAPI")
+      st.markdown(
+          "Faça uma consulta direta aos portais imobiliários para testar a "
+          "disponibilidade de dados de mercado para qualquer região."
+      )
+
+      c_test1, c_test2, c_test3 = st.columns(3)
+      with c_test1:
+        cidade_teste = st.text_input("Cidade", value="São José do Rio Preto")
+      with c_test2:
+        estado_teste = st.text_input("Estado (UF)", value="SP")
+      with c_test3:
+        tipo_teste = st.selectbox("Tipo de Imóvel", ["Apartamento", "Casa", "Terreno", "Comercial"])
+
+      if st.button("🔎 Consultar Preço de Mercado Agora", type="primary"):
+        with st.spinner("Conectando com a GeckoAPI e portais..."):
+          url = "https://api.geckoapi.com.br/v1/extract"
+          api_key = st.secrets.get("GECKO_API_KEY", "")
+
+          if not api_key:
+            st.error("⚠️ GECKO_API_KEY não configurada no secrets.toml!")
+          else:
+            headers = {"Authorization": f"Bearer {api_key}"}
+            tipo_mapeado = "apartment"
+            norm_t = str(tipo_teste).lower()
+            if "casa" in norm_t:
+              tipo_mapeado = "house"
+            elif "terreno" in norm_t or "lote" in norm_t:
+              tipo_mapeado = "land"
+            elif "comercial" in norm_t:
+              tipo_mapeado = "commercial"
+
+            portais = ["zapimoveis.com.br", "vivareal.com.br", "chavesnamao.com.br"]
+            sucesso = False
+
+            for portal in portais:
+              payload = {
+                  "target": portal, "type": "plp", "page": 1,
+                  "city": cidade_teste, "state": estado_teste,
+                  "businessType": "sale", "propertyTypes": [tipo_mapeado],
+              }
+
+              try:
+                response = requests.post(url, headers=headers, json=payload, timeout=15)
+                if response.status_code == 200:
+                  data = response.json()
+                  itens = data.get("data", {}).get("items", [])
+                  if not itens and isinstance(data.get("data"), list):
+                    itens = data.get("data", [])
+
+                  if itens:
+                    precos = [i.get("price") for i in itens if i.get("price") and i.get("price") > 0]
+                    if precos:
+                      media = sum(precos) / len(precos)
+                      st.success(f"✅ Dados encontrados com sucesso via **{portal}**!")
+                      m1, m2, m3 = st.columns(3)
+                      m1.metric("Preço Médio Calculado", f"R$ {media:,.2f}")
+                      m2.metric("Total de Imóveis Analisados", len(precos))
+                      m3.metric("Menor Preço Encontrado", f"R$ {min(precos):,.2f}")
+
+                      with st.expander("Ver detalhes dos anúncios retornados"):
+                        st.json(itens[:5])
+                      sucesso = True
+                      break
+                else:
+                  st.warning(f"Portal {portal} retornou status {response.status_code}")
+              except Exception as e:
+                st.error(f"Erro na requisição para {portal}: {e}")
+
+            if not sucesso:
+              st.warning("⚠️ Nenhum anúncio retornado pelos portais para os parâmetros informados. Tente ajustar a grafia da cidade ou o tipo de bem.")
+
   elif "df_final" not in st.session_state:
-    st.info(
-        "💡 **Para iniciar:** Faça o upload das duas planilhas e ajuste os"
-        " custos na **Central de Envio** acima, depois clique em **🚀 Processar"
-        " Oportunidades**."
-    )
+    st.info("💡 **Para iniciar:** Faça o upload das duas planilhas e ajuste os custos na **Central de Envio** acima, depois clique em **🚀 Processar Oportunidades**.")
