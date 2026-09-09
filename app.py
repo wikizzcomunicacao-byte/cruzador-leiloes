@@ -52,9 +52,12 @@ def consultar_preco_mercado_gecko(cidade, estado, tipo_bem):
   """
   url = "https://api.geckoapi.com.br/v1/extract"
 
-  # Puxa a chave de forma segura do secrets.toml (ou st.secrets)
-  api_key = st.secrets.get("GECKO_API_KEY", "")
-  headers = {"Authorization": f"Bearer {api_key}"}
+  # Tenta buscar do st.secrets da nuvem; se não achar, busca de uma variável de ambiente ou string direta
+  api_key = ""
+  try:
+    api_key = st.secrets.get("GECKO_API_KEY", "")
+  except Exception:
+    pass
 
   # Mapeamento do tipo de bem para o formato aceito pelas APIs de listagem
   tipo_mapeado = "apartment"
