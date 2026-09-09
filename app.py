@@ -52,12 +52,18 @@ def consultar_preco_mercado_gecko(cidade, estado, tipo_bem):
   """
   url = "https://api.geckoapi.com.br/v1/extract"
 
-  # Tenta buscar do st.secrets da nuvem; se não achar, busca de uma variável de ambiente ou string direta
+  # Busca segura da chave no ambiente da nuvem sem disparar alertas visuais
   api_key = ""
   try:
-    api_key = st.secrets.get("GECKO_API_KEY", "")
+    if hasattr(st, "secrets") and "GECKO_API_KEY" in st.secrets:
+      api_key = st.secrets["GECKO_API_KEY"]
   except Exception:
     pass
+
+  if not api_key:
+    return None
+
+  headers = {"Authorization": f"Bearer {api_key}"}
 
   # Mapeamento do tipo de bem para o formato aceito pelas APIs de listagem
   tipo_mapeado = "apartment"
@@ -1025,10 +1031,17 @@ else:
       if st.button("🔎 Consultar Preço de Mercado Agora", type="primary"):
         with st.spinner("Conectando com a GeckoAPI e portais..."):
           url = "https://api.geckoapi.com.br/v1/extract"
-          api_key = st.secrets.get("GECKO_API_KEY", "")
+          
+          # Busca segura da chave no ambiente da nuvem sem disparar alertas visuais
+          api_key = ""
+          try:
+            if hasattr(st, "secrets") and "GECKO_API_KEY" in st.secrets:
+              api_key = st.secrets["GECKO_API_KEY"]
+          except Exception:
+            pass
 
           if not api_key:
-            st.error("⚠️ GECKO_API_KEY não configurada no secrets.toml!")
+            st.error("⚠️ GECKO_API_KEY não configurada nos Secrets do Streamlit Cloud!")
           else:
             headers = {"Authorization": f"Bearer {api_key}"}
             tipo_mapeado = "apartment"
