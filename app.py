@@ -9,7 +9,6 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 import pandas as pd
 import plotly.express as px
-import requests
 import streamlit as st
 
 # ---------------------------------------------------------
@@ -43,73 +42,7 @@ if "imoveis_selecionados" not in st.session_state:
 
 
 # ---------------------------------------------------------
-# 3. INTEGRAÇÃO GECKOAPI (EXCLUSIVA PARA A ABA MANUAL)
-# ---------------------------------------------------------
-@st.cache_data
-def consultar_preco_mercado_gecko(cidade, estado, tipo_bem):
-  """Consulta os 3 portais via GeckoAPI em cascata usando st.secrets.
-  Retorna o preço médio de mercado encontrado na região.
-  """
-  url = "https://api.geckoapi.com.br/v1/extract"
-
-  api_key = ""
-  try:
-    if hasattr(st, "secrets") and "GECKO_API_KEY" in st.secrets:
-      api_key = st.secrets["GECKO_API_KEY"]
-  except Exception:
-    pass
-
-  if not api_key:
-    return None
-
-  headers = {"Authorization": f"Bearer {api_key}"}
-
-  tipo_mapeado = "apartment"
-  norm_t = str(tipo_bem).lower()
-  if "casa" in norm_t:
-    tipo_mapeado = "house"
-  elif "terreno" in norm_t or "lote" in norm_t:
-    tipo_mapeado = "land"
-  elif "comercial" in norm_t:
-    tipo_mapeado = "commercial"
-
-  portais = ["zapimoveis.com.br", "vivareal.com.br", "chavesnamao.com.br"]
-
-  for portal in portais:
-    payload = {
-        "target": portal,
-        "type": "plp",
-        "page": 1,
-        "city": cidade,
-        "state": estado,
-        "businessType": "sale",
-        "propertyTypes": [tipo_mapeado],
-    }
-
-    try:
-      response = requests.post(url, headers=headers, json=payload, timeout=10)
-      if response.status_code == 200:
-        data = response.json()
-        itens = data.get("data", {}).get("items", [])
-        if not itens and isinstance(data.get("data"), list):
-          itens = data.get("data", [])
-
-        if itens:
-          precos = [
-              i.get("price")
-              for i in itens
-              if i.get("price") and i.get("price") > 0
-          ]
-          if precos:
-            return sum(precos) / len(precos)
-    except Exception:
-      continue
-
-  return None
-
-
-# ---------------------------------------------------------
-# 4. TELA DE LOGIN COM BLOQUEIO PROGRESSIVO
+# 3. TELA DE LOGIN COM BLOQUEIO PROGRESSIVO
 # ---------------------------------------------------------
 def tela_login():
   st.markdown("<br><br><br>", unsafe_allow_html=True)
@@ -181,7 +114,7 @@ def tela_login():
 
 
 # ---------------------------------------------------------
-# 5. CONTROLE DE FLUXO (LOGIN vs APLICATIVO)
+# 4. CONTROLE DE FLUXO (LOGIN vs APLICATIVO)
 # ---------------------------------------------------------
 if not st.session_state["autenticado"]:
   tela_login()
@@ -526,7 +459,7 @@ else:
   col_head1, col_head2 = st.columns([4, 1])
   with col_head1:
     st.title("🎯 Cruzador Automático de Leilões & Inteligência")
-    st.markdown("Cruzamento inteligente entre o perfil dos investidores, oportunidades em leilão e dados de mercado.")
+    st.markdown("Cruzamento inteligente entre o perfil dos investidores e as oportunidades em leilão.")
   with col_head2:
     st.write(" ")
     with st.popover("❓ Como Usar"):
@@ -558,7 +491,7 @@ else:
   st.divider()
 
   if file_leiloes and file_investidores and executar:
-    with st.spinner("Analisando critérios e cruzando bases (Modo Instantâneo)..."):
+    with st.spinner("Analisando critérios e cruzando bases..."):
       try:
         df_leiloes = pd.read_excel(file_leiloes)
         df_investidores = pd.read_excel(file_investidores)
@@ -671,10 +604,8 @@ else:
           for _, imovel in sub_sorted.iterrows():
             preco = imovel["preco_effective"]
             avaliac = imovel["Valor de Avaliação do Leiloeiro"]
-
-            # SEM REQUISIÇÃO AUTOMÁTICA: Usa o valor de avaliação da planilha para cálculo base imediato
+            
             valor_referencia = avaliac
-
             custos_adicionais = (preco * taxa_leiloeiro) + (preco * taxa_itbi)
             custo_total = preco + custos_adicionais
             lucro_liquido = valor_referencia - custo_total if pd.notnull(valor_referencia) and pd.notnull(preco) else 0
@@ -690,7 +621,6 @@ else:
                 "Tipo de Bem": imovel["Tipo de Bem"],
                 "Preço do Leilão (R$)": preco,
                 "Valor de Avaliação (R$)": avaliac,
-                "Preço Médio Mercado (API)": avaliac,
                 "Desconto (%)": round(imovel["desconto_%"], 2),
                 "Custo Total Estimado (R$)": round(custo_total, 2),
                 "Lucro Líquido Real (R$)": round(lucro_liquido, 2),
@@ -701,7 +631,7 @@ else:
         st.session_state["df_final"] = pd.DataFrame(resultados)
         st.session_state["investidores_sem_imoveis"] = investidores_sem_imoveis
         st.session_state["imoveis_selecionados"] = []
-        st.toast("✅ Cruzamento concluído instantaneamente (Sem gasto de créditos)!", icon="🎉")
+        st.toast("✅ Cruzamento concluído com sucesso!", icon="🎉")
 
       except Exception as e:
         st.error(f"Erro ao processar as planilhas: {e}")
@@ -744,7 +674,6 @@ else:
             "📋 Tabela de Oportunidades",
             f"⭐ Selecionados ({num_sel})",
             "👤 Vitrine / Cards por Investidor",
-            "🔍 Consulta de Preço de Mercado",
         ]
         if is_tester
         else [
@@ -752,12 +681,11 @@ else:
             "📋 Tabela de Oportunidades & Download",
             f"⭐ Selecionados ({num_sel})",
             "👤 Vitrine / Cards por Investidor (PDF / WhatsApp)",
-            "🔍 Consulta de Preço de Mercado",
         ]
     )
 
     tabs = st.tabs(tab_labels)
-    tab1, tab2, tab3, tab4, tab_consulta_mercado = tabs[0], tabs[1], tabs[2], tabs[3], tabs[4]
+    tab1, tab2, tab3, tab4 = tabs[0], tabs[1], tabs[2], tabs[3]
 
     with tab1:
       st.write(" ")
@@ -807,7 +735,6 @@ else:
                 "Link do Imóvel": st.column_config.LinkColumn("Anúncio Oficial", display_text="🔗 Ver Imóvel"),
                 "Preço do Leilão (R$)": st.column_config.NumberColumn("Preço Leilão", format="R$ %,.2f"),
                 "Valor de Avaliação (R$)": st.column_config.NumberColumn("Valor Avaliação", format="R$ %,.2f"),
-                "Preço Médio Mercado (API)": st.column_config.NumberColumn("Mercado (API)", format="R$ %,.2f"),
                 "Custo Total Estimado (R$)": st.column_config.NumberColumn("Custo Total", format="R$ %,.2f"),
                 "Lucro Líquido Real (R$)": st.column_config.NumberColumn("Lucro Líquido Real", format="R$ %,.2f"),
                 "Desconto (%)": st.column_config.ProgressColumn("Desconto (%)", format="%.1f%%", min_value=0, max_value=100),
@@ -861,7 +788,6 @@ else:
                             <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']} | Pretendente: <b>{row['Nome do Investidor']}</b></p>
                             <div style="margin-bottom: 8px;">
                                 <span class="price-main">R$ {row['Preço do Leilão (R$)']:,.2f}</span> <span class="price-old">(Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f})</span><br>
-                                <span style="font-size: 0.88rem; color: #0284C7;">🌐 Preço Médio Mercado (API): R$ {row.get('Preço Médio Mercado (API)', 0):,.2f}</span><br>
                                 <span class="price-profit">💰 Lucro Líquido Real: R$ {row['Lucro Líquido Real (R$)']:,.2f}</span>
                             </div>
                             <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px;"><b>Endereço:</b> {row['Endereço']}</p>
@@ -940,7 +866,6 @@ else:
                 f"📍 Local: {row['Cidade Imóvel']} - {row['Estado Imóvel']}\n"
                 f"💰 Lance Mínimo: R$ {row['Preço do Leilão (R$)']:,.2f}\n"
                 f"💵 Valor de Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f}\n"
-                f"🌐 Preço Médio Mercado (API): R$ {row.get('Preço Médio Mercado (API)', 0):,.2f}\n"
                 f"📈 Lucro Líquido Estimado: R$ {row['Lucro Líquido Real (R$)']:,.2f}\n"
                 f"🔗 Acesse o anúncio oficial: {link_url}"
             )
@@ -955,7 +880,6 @@ else:
                             <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']}</p>
                             <div style="margin-bottom: 8px;">
                                 <span class="price-main">R$ {row['Preço do Leilão (R$)']:,.2f}</span> <span class="price-old">(Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f})</span><br>
-                                <span style="font-size: 0.88rem; color: #0284C7;">🌐 Preço Médio Mercado (API): R$ {row.get('Preço Médio Mercado (API)', 0):,.2f}</span><br>
                                 <span class="price-profit">💰 Lucro Líquido Real: R$ {row['Lucro Líquido Real (R$)']:,.2f}</span><br>
                                 <span class="price-costs">• Comissão do Leiloeiro: R$ {val_comissao_leiloeiro:,.2f}</span><br>
                                 <span class="price-costs">• ITBI e Cartório: R$ {val_itbi_cartorio:,.2f}</span><br>
@@ -1009,32 +933,6 @@ else:
               st.write("<br>", unsafe_allow_html=True)
 
         renderizar_vitrine_com_paginacao(df_inv)
-
-    with tab_consulta_mercado:
-      st.subheader("🔍 Painel de Consulta Manual - GeckoAPI")
-      st.markdown(
-          "Faça uma consulta direta aos portais imobiliários para testar a "
-          "disponibilidade de dados de mercado para qualquer região de forma controlada."
-      )
-
-      c_test1, c_test2, c_test3 = st.columns(3)
-      with c_test1:
-        cidade_teste = st.text_input("Cidade", value="São José do Rio Preto")
-      with c_test2:
-        estado_teste = st.text_input("Estado (UF)", value="SP")
-      with c_test3:
-        tipo_teste = st.selectbox("Tipo de Imóvel", ["Apartamento", "Casa", "Terreno", "Comercial"])
-
-      if st.button("🔎 Consultar Preço de Mercado Agora", type="primary"):
-        with st.spinner("Conectando com a GeckoAPI e portais..."):
-          preco_mercado_manual = consultar_preco_mercado_gecko(cidade_teste, estado_teste, tipo_teste)
-
-          if preco_mercado_manual and preco_mercado_manual > 0:
-            st.success("✅ Dados de mercado encontrados com sucesso!")
-            m1, m2 = st.columns(2)
-            m1.metric("Preço Médio Encontrado nos Portais", f"R$ {preco_mercado_manual:,.2f}")
-          else:
-            st.warning("⚠️ Nenhum anúncio retornado pelos portais para os parâmetros informados. Tente ajustar a grafia da cidade ou o tipo de bem.")
 
   elif "df_final" not in st.session_state:
     st.info("💡 **Para iniciar:** Faça o upload das duas planilhas e ajuste os custos na **Central de Envio** acima, depois clique em **🚀 Processar Oportunidades**.")
