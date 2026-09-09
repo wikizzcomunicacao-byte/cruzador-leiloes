@@ -9,6 +9,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 import pandas as pd
 import plotly.express as px
+import requests
 import streamlit as st
 
 # ---------------------------------------------------------
@@ -39,24 +40,26 @@ if "tempo_bloqueio_ate" not in st.session_state:
   st.session_state["tempo_bloqueio_ate"] = None
 if "imoveis_selecionados" not in st.session_state:
   st.session_state["imoveis_selecionados"] = []
+if "precos_mercado_cache" not in st.session_state:
+  st.session_state["precos_mercado_cache"] = {}
 
 
 # ---------------------------------------------------------
-# 3. INTEGRAÇÃO GECKOAPI (MERCADO IMOBILIÁRIO SEGURO)
+# 3. INTEGRAÇÃO GECKOAPI (MERCADO IMOBILIÁRIO SOB DEMANDA)
 # ---------------------------------------------------------
-@st.cache_data
 def consultar_preco_mercado_gecko(cidade, estado, tipo_bem):
-  """Consulta os 3 portais via GeckoAPI em cascata usando st.secrets.
+  """Consulta os 3 portais via GeckoAPI em cascata sob demanda.
 
-  Retorna o preço médio de mercado encontrado na região.
+  Gasta apenas 1 crédito por consulta realizada no clique do usuário.
   """
   url = "https://api.geckoapi.com.br/v1/extract"
-
-  # Puxa a chave de forma segura do secrets.toml (ou st.secrets)
   api_key = st.secrets.get("GECKO_API_KEY", "")
+  
+  if not api_key:
+    return None
+
   headers = {"Authorization": f"Bearer {api_key}"}
 
-  # Mapeamento do tipo de bem para o formato aceito pelas APIs de listagem
   tipo_mapeado = "apartment"
   norm_t = str(tipo_bem).lower()
   if "casa" in norm_t:
@@ -66,7 +69,6 @@ def consultar_preco_mercado_gecko(cidade, estado, tipo_bem):
   elif "comercial" in norm_t:
     tipo_mapeado = "commercial"
 
-  # Ordem dos portais: se achar no primeiro, economiza os outros (gasta 1 crédito)
   portais = ["zapimoveis.com.br", "vivareal.com.br", "chavesnamao.com.br"]
 
   for portal in portais:
@@ -81,7 +83,7 @@ def consultar_preco_mercado_gecko(cidade, estado, tipo_bem):
     }
 
     try:
-      response = requests.post(url, headers=headers, json=payload, timeout=10)
+      response = requests.post(url, headers=headers, json=payload, timeout=12)
       if response.status_code == 200:
         data = response.json()
         itens = data.get("data", {}).get("items", [])
@@ -721,7 +723,7 @@ else:
 
   if file_leiloes and file_investidores and executar:
     with st.spinner(
-        "Analisando critérios, cruzando bases e consultando dados de mercado..."
+        "Analisando critérios e cruzando bases de dados com segurança..."
     ):
       try:
         df_leiloes = pd.read_excel(file_leiloes)
@@ -877,24 +879,11 @@ else:
             preco = imovel["preco_effective"]
             avaliac = imovel["Valor de Avaliação do Leiloeiro"]
 
-            # Consulta inteligente via API (GeckoAPI) para buscar preço médio de mercado da região
-            preco_mercado_api = consultar_preco_mercado_gecko(
-                str(imovel["Cidade"]),
-                str(imovel["Estado"]),
-                str(imovel["Tipo de Bem"]),
-            )
-            # Se a API retornar um preço de mercado válido, usamos ele como base de avaliação opcional
-            valor_referencia = (
-                preco_mercado_api
-                if (preco_mercado_api and preco_mercado_api > 0)
-                else avaliac
-            )
-
             custos_adicionais = (preco * taxa_leiloeiro) + (preco * taxa_itbi)
             custo_total = preco + custos_adicionais
             lucro_liquido = (
-                valor_referencia - custo_total
-                if pd.notnull(valor_referencia) and pd.notnull(preco)
+                avaliac - custo_total
+                if pd.notnull(avaliac) and pd.notnull(preco)
                 else 0
             )
 
@@ -909,11 +898,6 @@ else:
                 "Tipo de Bem": imovel["Tipo de Bem"],
                 "Preço do Leilão (R$)": preco,
                 "Valor de Avaliação (R$)": avaliac,
-                "Preço Médio Mercado (API)": (
-                    round(preco_mercado_api, 2)
-                    if preco_mercado_api
-                    else avaliac
-                ),
                 "Desconto (%)": round(imovel["desconto_%"], 2),
                 "Custo Total Estimado (R$)": round(custo_total, 2),
                 "Lucro Líquido Real (R$)": round(lucro_liquido, 2),
@@ -924,10 +908,7 @@ else:
         st.session_state["df_final"] = pd.DataFrame(resultados)
         st.session_state["investidores_sem_imoveis"] = investidores_sem_imoveis
         st.session_state["imoveis_selecionados"] = []
-        st.toast(
-            "✅ Processamento Enterprise & Inteligência de Mercado concluído!",
-            icon="🎉",
-        )
+        st.toast("✅ Processamento Enterprise concluído!", icon="🎉")
 
       except Exception as e:
         st.error(f"Erro ao processar as planilhas: {e}")
@@ -1095,9 +1076,6 @@ else:
                 "Valor de Avaliação (R$)": st.column_config.NumberColumn(
                     "Valor Avaliação", format="R$ %,.2f"
                 ),
-                "Preço Médio Mercado (API)": st.column_config.NumberColumn(
-                    "Mercado (API)", format="R$ %,.2f"
-                ),
                 "Custo Total Estimado (R$)": st.column_config.NumberColumn(
                     "Custo Total", format="R$ %,.2f"
                 ),
@@ -1186,7 +1164,6 @@ else:
                             <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']} | Pretendente: <b>{row['Nome do Investidor']}</b></p>
                             <div style="margin-bottom: 8px;">
                                 <span class="price-main">R$ {row['Preço do Leilão (R$)']:,.2f}</span> <span class="price-old">(Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f})</span><br>
-                                <span style="font-size: 0.88rem; color: #0284C7;">🌐 Preço Médio Mercado (API): R$ {row.get('Preço Médio Mercado (API)', 0):,.2f}</span><br>
                                 <span class="price-profit">💰 Lucro Líquido Real: R$ {row['Lucro Líquido Real (R$)']:,.2f}</span>
                             </div>
                             <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px;"><b>Endereço:</b> {row['Endereço']}</p>
@@ -1300,20 +1277,35 @@ else:
                 for item in st.session_state["imoveis_selecionados"]
             )
 
+            cache_key = f"{row['Nome do Investidor']}_{row['Título do Imóvel']}_{row['Cidade Imóvel']}"
+            preco_mercado_salvo = st.session_state["precos_mercado_cache"].get(
+                cache_key, None
+            )
+
+            # Define o valor exibido e lucro baseando-se no preço de mercado da API se houver consulta ativa
+            lucro_exibido = row["Lucro Líquido Real (R$)"]
+            if preco_mercado_salvo is not None:
+              custo_tot_val = row["Custo Total Estimado (R$)"]
+              lucro_exibido = preco_mercado_salvo - custo_tot_val
+
             msg_whatsapp = (
                 f"Olá {investidor_sel}! Encontrei uma excelente oportunidade de leilão para o seu perfil:\n\n"
                 f"🏢 *{row['Título do Imóvel']}*\n"
                 f"📍 Local: {row['Cidade Imóvel']} - {row['Estado Imóvel']}\n"
                 f"💰 Lance Mínimo: R$ {row['Preço do Leilão (R$)']:,.2f}\n"
                 f"💵 Valor de Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f}\n"
-                f"🌐 Preço Médio Mercado (API): R$ {row.get('Preço Médio Mercado (API)', 0):,.2f}\n"
-                f"📈 Lucro Líquido Estimado: R$ {row['Lucro Líquido Real (R$)']:,.2f}\n"
+                f"📈 Lucro Líquido Estimado: R$ {lucro_exibido:,.2f}\n"
                 f"🔗 Acesse o anúncio oficial: {link_url}"
             )
             link_wats = f"https://api.whatsapp.com/send?text={quote(msg_whatsapp)}"
 
             with col_target:
               st.markdown(badge_html, unsafe_allow_html=True)
+              
+              mercado_html_str = ""
+              if preco_mercado_salvo is not None:
+                mercado_html_str = f'<span style="font-size: 0.88rem; color: #0284C7;">🌐 Preço Médio Mercado (API): R$ {preco_mercado_salvo:,.2f}</span><br>'
+
               st.markdown(
                   f"""
                         <div class="property-card">
@@ -1321,8 +1313,8 @@ else:
                             <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']}</p>
                             <div style="margin-bottom: 8px;">
                                 <span class="price-main">R$ {row['Preço do Leilão (R$)']:,.2f}</span> <span class="price-old">(Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f})</span><br>
-                                <span style="font-size: 0.88rem; color: #0284C7;">🌐 Preço Médio Mercado (API): R$ {row.get('Preço Médio Mercado (API)', 0):,.2f}</span><br>
-                                <span class="price-profit">💰 Lucro Líquido Real: R$ {row['Lucro Líquido Real (R$)']:,.2f}</span><br>
+                                {mercado_html_str}
+                                <span class="price-profit">💰 Lucro Líquido Real: R$ {lucro_exibido:,.2f}</span><br>
                                 <span class="price-costs">• Comissão do Leiloeiro: R$ {val_comissao_leiloeiro:,.2f}</span><br>
                                 <span class="price-costs">• ITBI e Cartório: R$ {val_itbi_cartorio:,.2f}</span><br>
                                 <span class="price-costs">🛠️ Custo Total Estimado: R$ {row['Custo Total Estimado (R$)']:,.2f}</span>
@@ -1332,6 +1324,33 @@ else:
                         """,
                   unsafe_allow_html=True,
               )
+
+              if preco_mercado_salvo is None:
+                if st.button(
+                    "🔍 Consultar Preço de Mercado (ZAP, Chaves na Mão e VivaReal)",
+                    key=f"btn_mercado_{idx}_{cache_key}",
+                    use_container_width=True,
+                ):
+                  with st.spinner("Consultando portais imobiliários via GeckoAPI..."):
+                    preco_medio = consultar_preco_mercado_gecko(
+                        str(row["Cidade Imóvel"]),
+                        str(row["Estado Imóvel"]),
+                        str(row["Tipo de Bem"]),
+                    )
+                    if preco_medio:
+                      st.session_state["precos_mercado_cache"][
+                          cache_key
+                      ] = preco_medio
+                      st.toast(
+                          "✅ Preço de mercado consultado com sucesso!",
+                          icon="🎉",
+                      )
+                      st.rerun()
+                    else:
+                      st.warning(
+                          "⚠️ Não foram encontrados anúncios suficientes na"
+                          " região para esta consulta nos portais."
+                      )
 
               st.markdown(
                   """
