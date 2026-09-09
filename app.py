@@ -214,12 +214,7 @@ else:
         div[data-testid="stMetric"] { background-color: #FFFFFF; border: 1px solid #E2E8F0; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
         div[data-testid="stMetricValue"] { font-size: 1.6rem; font-weight: 700; color: #0052CC; }
         .property-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 1.2rem; margin-bottom: 0.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .property-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.1); }
         .badge-type { background-color: #E0E7FF; color: #3730A3; padding: 4px 10px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; display: inline-block; margin-bottom: 8px; }
-        .price-main { font-size: 1.35rem; font-weight: bold; color: #166534; }
-        .price-profit { font-size: 1.05rem; font-weight: 700; color: #2563EB; }
-        .price-costs { font-size: 0.88rem; color: #64748B; }
-        .price-old { font-size: 0.9rem; color: #9CA3AF; text-decoration: line-through; }
         </style>
     """,
       unsafe_allow_html=True,
@@ -1150,26 +1145,14 @@ else:
               else "#"
           )
           with col_target:
-            st.markdown(
-                f"""
-                        <div class="property-card">
-                            <span class="badge-type">🏠 {row['Tipo de Bem']}</span>
-                            <h4 style="margin-top: 8px; margin-bottom: 4px; color: #1E293B;">{row['Título do Imóvel']}</h4>
-                            <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']} | Pretendente: <b>{row['Nome do Investidor']}</b></p>
-                            <div style="margin-bottom: 8px;">
-                                <span class="price-main">R$ {row['Preço do Leilão (R$)']:,.2f}</span> <span class="price-old">(Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f})</span><br>
-                                <span class="price-profit">💰 Lucro Líquido Real: R$ {row['Lucro Líquido Real (R$)']:,.2f}</span>
-                            </div>
-                            <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px;"><b>Endereço:</b> {row['Endereço']}</p>
-                            <a href="{link_url}" target="_blank" style="text-decoration: none;">
-                                <button style="background-color: #0052CC; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%;">
-                                    🔗 Ver Anúncio Oficial
-                                </button>
-                            </a>
-                        </div>
-                        """,
-                unsafe_allow_html=True,
-            )
+            with st.container(border=True):
+              st.markdown(f'<span class="badge-type">🏠 {row["Tipo de Bem"]}</span>', unsafe_allow_html=True)
+              st.subheader(row['Título do Imóvel'])
+              st.caption(f"📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']} | Pretendente: **{row['Nome do Investidor']}**")
+              st.markdown(f"**Preço Leilão:** R$ {row['Preço do Leilão (R$)']:,.2f} *(Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f})*")
+              st.markdown(f"💰 **Lucro Líquido Real:** R$ {row['Lucro Líquido Real (R$)']:,.2f}")
+              st.markdown(f"**Endereço:** {row['Endereço']}")
+              st.markdown(f"[🔗 Ver Anúncio Oficial]({link_url})")
       else:
         st.info(
             "💡 Nenhum imóvel foi selecionado ainda. Vá até a aba **👤 Vitrine /"
@@ -1254,7 +1237,7 @@ else:
           cols_cards = st.columns(2)
           for idx, (_, row) in enumerate(df_paginado.iterrows()):
             col_target = cols_cards[idx % 2]
-            badge_html = f'<span class="badge-type">🏠 {row["Tipo de Bem"]}</span>'
+            
             preco_card = row["Preço do Leilão (R$)"]
             val_comissao_leiloeiro = preco_card * taxa_leiloeiro
             val_itbi_cartorio = preco_card * taxa_itbi
@@ -1288,45 +1271,24 @@ else:
             link_wats = f"https://api.whatsapp.com/send?text={quote(msg_whatsapp)}"
 
             with col_target:
-              st.markdown(badge_html, unsafe_allow_html=True)
-
-              mercado_html_extra = ""
-              if preco_mercado_salvo is not None:
-                mercado_html_extra = f'<span style="font-size: 0.88rem; color: #0284C7;">🌐 Preço Médio Mercado (ZAP, Chaves na Mão e VivaReal): R$ {preco_mercado_salvo:,.2f}</span><br>'
-
-              card_conteudo = f"""
-                        <div class="property-card">
-                            <h4 style="margin-top: 4px; margin-bottom: 4px; color: #1E293B;">{row['Título do Imóvel']}</h4>
-                            <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']}</p>
-                            <div style="margin-bottom: 8px;">
-                                <span class="price-main">R$ {row['Preço do Leilão (R$)']:,.2f}</span> <span class="price-old">(Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f})</span><br>
-                                {mercado_html_extra}
-                                <span class="price-profit">💰 Lucro Líquido Real: R$ {row['Lucro Líquido Real (R$)']:,.2f}</span><br>
-                                <span class="price-costs">• Comissão do Leiloeiro: R$ {val_comissao_leiloeiro:,.2f}</span><br>
-                                <span class="price-costs">• ITBI e Cartório: R$ {val_itbi_cartorio:,.2f}</span><br>
-                                <span class="price-costs">🛠️ Custo Total Estimado: R$ {row['Custo Total Estimado (R$)']:,.2f}</span>
-                            </div>
-                            <p style="font-size: 0.85rem; color: #475569; margin-bottom: 0;"><b>Endereço:</b> {row['Endereço']}</p>
-                        </div>
-                        """
-              st.markdown(card_conteudo, unsafe_allow_html=True)
-
-              st.markdown(
-                  """
-                    <style>
-                    div[data-testid="column"] button[kind="secondary"] {
-                        background-color: #0052CC !important; color: white !important; border: none !important; border-radius: 8px !important; box-shadow: 0 2px 6px rgba(0,0,0,0.1) !important; font-size: 1.1rem !important; font-weight: bold !important; padding: 0.6rem !important; min-height: 44px !important; height: 44px !important; width: 100% !important; display: flex; align-items: center; justify-content: center;
-                    }
-                    div[data-testid="column"] button[kind="secondary"]:hover { background-color: #003D99 !important; box-shadow: 0 4px 10px rgba(0,0,0,0.15) !important; }
-                    </style>
-                    """,
-                  unsafe_allow_html=True,
-              )
+              with st.container(border=True):
+                tipo_bem_str = str(row['Tipo de Bem'])
+                st.markdown(f'<span class="badge-type">🏠 {tipo_bem_str}</span>', unsafe_allow_html=True)
+                st.subheader(row['Título do Imóvel'])
+                st.caption(f"📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']}")
+                
+                st.markdown(f"**Lance Mínimo:** R$ {row['Preço do Leilão (R$)']:,.2f} &nbsp;&nbsp; <span style='color: #9CA3AF; text-decoration: line-through; font-size: 0.9rem;'>Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f}</span>", unsafe_allow_html=True)
+                
+                if preco_mercado_salvo is not None:
+                  st.markdown(f"🌐 **Preço Médio Mercado (ZAP, Chaves na Mão e VivaReal):** <span style='color: #0284C7; font-weight: bold;'>R$ {preco_mercado_salvo:,.2f}</span>", unsafe_allow_html=True)
+                
+                st.markdown(f"💰 **Lucro Líquido Real:** <span style='color: #2563EB; font-weight: bold;'>R$ {row['Lucro Líquido Real (R$)']:,.2f}</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='color: #64748B; font-size: 0.88rem;'>• Comissão do Leiloeiro: R$ {val_comissao_leiloeiro:,.2f}<br>• ITBI e Cartório: R$ {val_itbi_cartorio:,.2f}<br>🛠️ Custo Total Estimado: R$ {row['Custo Total Estimado (R$)']:,.2f}</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='font-size: 0.85rem; color: #475569;'><b>Endereço:</b> {row['Endereço']}</span>", unsafe_allow_html=True)
 
               if preco_mercado_salvo is None:
                 if st.button(
-                    "🔍 Consultar Preço de Mercado (ZAP, Chaves na Mão e"
-                    " VivaReal)",
+                    "🔍 Consultar Preço de Mercado (ZAP, Chaves na Mão e VivaReal)",
                     key=f"btn_mercado_{idx}_{cache_key}",
                     use_container_width=True,
                 ):
