@@ -43,7 +43,7 @@ if "imoveis_selecionados" not in st.session_state:
 
 
 # ---------------------------------------------------------
-# 3. INTEGRAÇÃO GECKOAPI (MERCADO IMOBILIÁRIO SEGURO)
+# 3. INTEGRAÇÃO GECKOAPI (EXCLUSIVA PARA A ABA MANUAL)
 # ---------------------------------------------------------
 @st.cache_data
 def consultar_preco_mercado_gecko(cidade, estado, tipo_bem):
@@ -52,7 +52,6 @@ def consultar_preco_mercado_gecko(cidade, estado, tipo_bem):
   """
   url = "https://api.geckoapi.com.br/v1/extract"
 
-  # Busca segura da chave no ambiente da nuvem sem disparar alertas visuais
   api_key = ""
   try:
     if hasattr(st, "secrets") and "GECKO_API_KEY" in st.secrets:
@@ -65,7 +64,6 @@ def consultar_preco_mercado_gecko(cidade, estado, tipo_bem):
 
   headers = {"Authorization": f"Bearer {api_key}"}
 
-  # Mapeamento do tipo de bem para o formato aceito pelas APIs de listagem
   tipo_mapeado = "apartment"
   norm_t = str(tipo_bem).lower()
   if "casa" in norm_t:
@@ -75,7 +73,6 @@ def consultar_preco_mercado_gecko(cidade, estado, tipo_bem):
   elif "comercial" in norm_t:
     tipo_mapeado = "commercial"
 
-  # Ordem dos portais: se achar no primeiro, economiza os outros (gasta 1 crédito)
   portais = ["zapimoveis.com.br", "vivareal.com.br", "chavesnamao.com.br"]
 
   for portal in portais:
@@ -561,7 +558,7 @@ else:
   st.divider()
 
   if file_leiloes and file_investidores and executar:
-    with st.spinner("Analisando critérios, cruzando bases e consultando dados de mercado..."):
+    with st.spinner("Analisando critérios e cruzando bases (Modo Instantâneo)..."):
       try:
         df_leiloes = pd.read_excel(file_leiloes)
         df_investidores = pd.read_excel(file_investidores)
@@ -675,8 +672,8 @@ else:
             preco = imovel["preco_effective"]
             avaliac = imovel["Valor de Avaliação do Leiloeiro"]
 
-            preco_mercado_api = consultar_preco_mercado_gecko(str(imovel["Cidade"]), str(imovel["Estado"]), str(imovel["Tipo de Bem"]))
-            valor_referencia = preco_mercado_api if (preco_mercado_api and preco_mercado_api > 0) else avaliac
+            # SEM REQUISIÇÃO AUTOMÁTICA: Usa o valor de avaliação da planilha para cálculo base imediato
+            valor_referencia = avaliac
 
             custos_adicionais = (preco * taxa_leiloeiro) + (preco * taxa_itbi)
             custo_total = preco + custos_adicionais
@@ -693,7 +690,7 @@ else:
                 "Tipo de Bem": imovel["Tipo de Bem"],
                 "Preço do Leilão (R$)": preco,
                 "Valor de Avaliação (R$)": avaliac,
-                "Preço Médio Mercado (API)": round(preco_mercado_api, 2) if preco_mercado_api else avaliac,
+                "Preço Médio Mercado (API)": avaliac,
                 "Desconto (%)": round(imovel["desconto_%"], 2),
                 "Custo Total Estimado (R$)": round(custo_total, 2),
                 "Lucro Líquido Real (R$)": round(lucro_liquido, 2),
@@ -704,7 +701,7 @@ else:
         st.session_state["df_final"] = pd.DataFrame(resultados)
         st.session_state["investidores_sem_imoveis"] = investidores_sem_imoveis
         st.session_state["imoveis_selecionados"] = []
-        st.toast("✅ Processamento Enterprise & Inteligência de Mercado concluído!", icon="🎉")
+        st.toast("✅ Cruzamento concluído instantaneamente (Sem gasto de créditos)!", icon="🎉")
 
       except Exception as e:
         st.error(f"Erro ao processar as planilhas: {e}")
@@ -1017,7 +1014,7 @@ else:
       st.subheader("🔍 Painel de Consulta Manual - GeckoAPI")
       st.markdown(
           "Faça uma consulta direta aos portais imobiliários para testar a "
-          "disponibilidade de dados de mercado para qualquer região."
+          "disponibilidade de dados de mercado para qualquer região de forma controlada."
       )
 
       c_test1, c_test2, c_test3 = st.columns(3)
@@ -1030,68 +1027,14 @@ else:
 
       if st.button("🔎 Consultar Preço de Mercado Agora", type="primary"):
         with st.spinner("Conectando com a GeckoAPI e portais..."):
-          url = "https://api.geckoapi.com.br/v1/extract"
-          
-          # Busca segura da chave no ambiente da nuvem sem disparar alertas visuais
-          api_key = ""
-          try:
-            if hasattr(st, "secrets") and "GECKO_API_KEY" in st.secrets:
-              api_key = st.secrets["GECKO_API_KEY"]
-          except Exception:
-            pass
+          preco_mercado_manual = consultar_preco_mercado_gecko(cidade_teste, estado_teste, tipo_teste)
 
-          if not api_key:
-            st.error("⚠️ GECKO_API_KEY não configurada nos Secrets do Streamlit Cloud!")
+          if preco_mercado_manual and preco_mercado_manual > 0:
+            st.success("✅ Dados de mercado encontrados com sucesso!")
+            m1, m2 = st.columns(2)
+            m1.metric("Preço Médio Encontrado nos Portais", f"R$ {preco_mercado_manual:,.2f}")
           else:
-            headers = {"Authorization": f"Bearer {api_key}"}
-            tipo_mapeado = "apartment"
-            norm_t = str(tipo_teste).lower()
-            if "casa" in norm_t:
-              tipo_mapeado = "house"
-            elif "terreno" in norm_t or "lote" in norm_t:
-              tipo_mapeado = "land"
-            elif "comercial" in norm_t:
-              tipo_mapeado = "commercial"
-
-            portais = ["zapimoveis.com.br", "vivareal.com.br", "chavesnamao.com.br"]
-            sucesso = False
-
-            for portal in portais:
-              payload = {
-                  "target": portal, "type": "plp", "page": 1,
-                  "city": cidade_teste, "state": estado_teste,
-                  "businessType": "sale", "propertyTypes": [tipo_mapeado],
-              }
-
-              try:
-                response = requests.post(url, headers=headers, json=payload, timeout=15)
-                if response.status_code == 200:
-                  data = response.json()
-                  itens = data.get("data", {}).get("items", [])
-                  if not itens and isinstance(data.get("data"), list):
-                    itens = data.get("data", [])
-
-                  if itens:
-                    precos = [i.get("price") for i in itens if i.get("price") and i.get("price") > 0]
-                    if precos:
-                      media = sum(precos) / len(precos)
-                      st.success(f"✅ Dados encontrados com sucesso via **{portal}**!")
-                      m1, m2, m3 = st.columns(3)
-                      m1.metric("Preço Médio Calculado", f"R$ {media:,.2f}")
-                      m2.metric("Total de Imóveis Analisados", len(precos))
-                      m3.metric("Menor Preço Encontrado", f"R$ {min(precos):,.2f}")
-
-                      with st.expander("Ver detalhes dos anúncios retornados"):
-                        st.json(itens[:5])
-                      sucesso = True
-                      break
-                else:
-                  st.warning(f"Portal {portal} retornou status {response.status_code}")
-              except Exception as e:
-                st.error(f"Erro na requisição para {portal}: {e}")
-
-            if not sucesso:
-              st.warning("⚠️ Nenhum anúncio retornado pelos portais para os parâmetros informados. Tente ajustar a grafia da cidade ou o tipo de bem.")
+            st.warning("⚠️ Nenhum anúncio retornado pelos portais para os parâmetros informados. Tente ajustar a grafia da cidade ou o tipo de bem.")
 
   elif "df_final" not in st.session_state:
     st.info("💡 **Para iniciar:** Faça o upload das duas planilhas e ajuste os custos na **Central de Envio** acima, depois clique em **🚀 Processar Oportunidades**.")
