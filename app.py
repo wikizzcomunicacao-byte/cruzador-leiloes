@@ -9,6 +9,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 import pandas as pd
 import plotly.express as px
+import requests
 import streamlit as st
 
 # ---------------------------------------------------------
@@ -47,7 +48,7 @@ if "precos_mercado_cache" not in st.session_state:
 # 3. INTEGRAÇÃO GECKOAPI (MERCADO IMOBILIÁRIO SOB DEMANDA)
 # ---------------------------------------------------------
 def consultar_preco_mercado_gecko(cidade, estado, tipo_bem):
-  """Consulta os 3 portais via GeckoAPI em cascata sob demanda.
+  """Consulta os portais via GeckoAPI em cascata sob demanda.
 
   Ordem: ZAP Imóveis -> VivaReal -> Chaves na Mão.
   """
@@ -64,7 +65,6 @@ def consultar_preco_mercado_gecko(cidade, estado, tipo_bem):
   elif "comercial" in norm_t:
     tipo_mapeado = "commercial"
 
-  # Ordem solicitada: ZAP Imóveis, VivaReal e Chaves na Mão
   portais = ["zapimoveis.com.br", "vivareal.com.br", "chavesnamao.com.br"]
 
   for portal in portais:
@@ -1271,7 +1271,6 @@ else:
                 for item in st.session_state["imoveis_selecionados"]
             )
 
-            # Chave única para o cache deste imóvel específico
             cache_key = f"{row['Nome do Investidor']}_{row['Título do Imóvel']}_{row['Cidade Imóvel']}"
             preco_mercado_salvo = st.session_state["precos_mercado_cache"].get(
                 cache_key, None
@@ -1291,15 +1290,11 @@ else:
             with col_target:
               st.markdown(badge_html, unsafe_allow_html=True)
 
-              # Exibe info de mercado se já foi consultado
               mercado_html_extra = ""
               if preco_mercado_salvo is not None:
-                mercado_html_extra = f"""
-                                <span style="font-size: 0.88rem; color: #0284C7;">🌐 Preço Médio Mercado (ZAP, Chaves na Mão e VivaReal): R$ {preco_mercado_salvo:,.2f}</span><br>
-                                """
+                mercado_html_extra = f'<span style="font-size: 0.88rem; color: #0284C7;">🌐 Preço Médio Mercado (ZAP, Chaves na Mão e VivaReal): R$ {preco_mercado_salvo:,.2f}</span><br>'
 
-              st.markdown(
-                  f"""
+              card_conteudo = f"""
                         <div class="property-card">
                             <h4 style="margin-top: 4px; margin-bottom: 4px; color: #1E293B;">{row['Título do Imóvel']}</h4>
                             <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']}</p>
@@ -1313,9 +1308,8 @@ else:
                             </div>
                             <p style="font-size: 0.85rem; color: #475569; margin-bottom: 0;"><b>Endereço:</b> {row['Endereço']}</p>
                         </div>
-                        """,
-                  unsafe_allow_html=True,
-              )
+                        """
+              st.markdown(card_conteudo, unsafe_allow_html=True)
 
               st.markdown(
                   """
@@ -1329,7 +1323,6 @@ else:
                   unsafe_allow_html=True,
               )
 
-              # Botão sob demanda para consultar os portais
               if preco_mercado_salvo is None:
                 if st.button(
                     "🔍 Consultar Preço de Mercado (ZAP, Chaves na Mão e"
