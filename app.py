@@ -42,7 +42,68 @@ if "imoveis_selecionados" not in st.session_state:
 
 
 # ---------------------------------------------------------
-# 3. TELA DE LOGIN COM BLOQUEIO PROGRESSIVO
+# 3. INTEGRAÇÃO GECKOAPI (MERCADO IMOBILIÁRIO SEGURO)
+# ---------------------------------------------------------
+@st.cache_data
+def consultar_preco_mercado_gecko(cidade, estado, tipo_bem):
+  """Consulta os 3 portais via GeckoAPI em cascata usando st.secrets.
+
+  Retorna o preço médio de mercado encontrado na região.
+  """
+  url = "https://api.geckoapi.com.br/v1/extract"
+
+  # Puxa a chave de forma segura do secrets.toml (ou st.secrets)
+  api_key = st.secrets.get("GECKO_API_KEY", "")
+  headers = {"Authorization": f"Bearer {api_key}"}
+
+  # Mapeamento do tipo de bem para o formato aceito pelas APIs de listagem
+  tipo_mapeado = "apartment"
+  norm_t = str(tipo_bem).lower()
+  if "casa" in norm_t:
+    tipo_mapeado = "house"
+  elif "terreno" in norm_t or "lote" in norm_t:
+    tipo_mapeado = "land"
+  elif "comercial" in norm_t:
+    tipo_mapeado = "commercial"
+
+  # Ordem dos portais: se achar no primeiro, economiza os outros (gasta 1 crédito)
+  portais = ["zapimoveis.com.br", "vivareal.com.br", "chavesnamao.com.br"]
+
+  for portal in portais:
+    payload = {
+        "target": portal,
+        "type": "plp",
+        "page": 1,
+        "city": cidade,
+        "state": estado,
+        "businessType": "sale",
+        "propertyTypes": [tipo_mapeado],
+    }
+
+    try:
+      response = requests.post(url, headers=headers, json=payload, timeout=10)
+      if response.status_code == 200:
+        data = response.json()
+        itens = data.get("data", {}).get("items", [])
+        if not itens and isinstance(data.get("data"), list):
+          itens = data.get("data", [])
+
+        if itens:
+          precos = [
+              i.get("price")
+              for i in itens
+              if i.get("price") and i.get("price") > 0
+          ]
+          if precos:
+            return sum(precos) / len(precos)
+    except Exception:
+      continue
+
+  return None
+
+
+# ---------------------------------------------------------
+# 4. TELA DE LOGIN COM BLOQUEIO PROGRESSIVO
 # ---------------------------------------------------------
 def tela_login():
   st.markdown("<br><br><br>", unsafe_allow_html=True)
@@ -114,7 +175,7 @@ def tela_login():
 
 
 # ---------------------------------------------------------
-# 4. CONTROLE DE FLUXO (LOGIN vs APLICATIVO)
+# 5. CONTROLE DE FLUXO (LOGIN vs APLICATIVO)
 # ---------------------------------------------------------
 if not st.session_state["autenticado"]:
   tela_login()
@@ -165,7 +226,6 @@ else:
     """,
       unsafe_allow_html=True,
   )
-
 
   def clean_ascii(text):
     if not isinstance(text, str):
@@ -220,7 +280,6 @@ else:
       text = text.replace(k, v)
     return text.encode("latin-1", "replace").decode("latin-1")
 
-
   def normalize(text):
     if not isinstance(text, str):
       return ""
@@ -233,7 +292,6 @@ else:
     text = re.sub(r"[ç]", "c", text)
     text = re.sub(r"[^a-z0-9\s]", " ", text)
     return " ".join(text.split())
-
 
   def parse_budget(budget_str):
     budget_str = str(budget_str)
@@ -250,7 +308,6 @@ else:
     else:
       return 0, 999999999
 
-
   def parse_types(tipos_str):
     norm_t = normalize(tipos_str)
     res = set()
@@ -265,7 +322,6 @@ else:
     if "outros" in norm_t:
       res.update(["Area Rural", "Comercial", "Indefinido", "Vaga de Garagem"])
     return list(res)
-
 
   class InformativoLeiloesPDF(FPDF):
 
@@ -308,7 +364,6 @@ else:
           0,
           "C",
       )
-
 
   def gerar_pdf_informativo(nome_investidor, df_inv):
     pdf = InformativoLeiloesPDF()
@@ -535,7 +590,6 @@ else:
       return out.encode("latin-1")
     return bytes(out)
 
-
   def gerar_excel_profissional(df_input):
     output = io.BytesIO()
     df_export = df_input.copy()
@@ -589,9 +643,9 @@ else:
           for c in cells:
             c.alignment = align_center
         elif "Link" in str(col_name):
-            for c in cells:
-              c.font = font_link
-              c.alignment = align_center
+          for c in cells:
+            c.font = font_link
+            c.alignment = align_center
         else:
           for c in cells:
             c.alignment = align_left
@@ -618,13 +672,12 @@ else:
         ws.column_dimensions[col_letter].width = col_widths.get(col_name, 20)
     return output.getvalue()
 
-
   col_head1, col_head2 = st.columns([4, 1])
   with col_head1:
     st.title("🎯 Cruzador Automático de Leilões & Inteligência")
     st.markdown(
-        "Cruzamento inteligente entre o perfil dos investidores e as"
-        " oportunidades em leilão."
+        "Cruzamento inteligente entre o perfil dos investidores, oportunidades"
+        " em leilão e dados de mercado."
     )
   with col_head2:
     st.write(" ")
@@ -667,7 +720,9 @@ else:
   st.divider()
 
   if file_leiloes and file_investidores and executar:
-    with st.spinner("Analisando critérios e cruzando bases de dados..."):
+    with st.spinner(
+        "Analisando critérios, cruzando bases e consultando dados de mercado..."
+    ):
       try:
         df_leiloes = pd.read_excel(file_leiloes)
         df_investidores = pd.read_excel(file_investidores)
@@ -822,11 +877,24 @@ else:
             preco = imovel["preco_effective"]
             avaliac = imovel["Valor de Avaliação do Leiloeiro"]
 
+            # Consulta inteligente via API (GeckoAPI) para buscar preço médio de mercado da região
+            preco_mercado_api = consultar_preco_mercado_gecko(
+                str(imovel["Cidade"]),
+                str(imovel["Estado"]),
+                str(imovel["Tipo de Bem"]),
+            )
+            # Se a API retornar um preço de mercado válido, usamos ele como base de avaliação opcional
+            valor_referencia = (
+                preco_mercado_api
+                if (preco_mercado_api and preco_mercado_api > 0)
+                else avaliac
+            )
+
             custos_adicionais = (preco * taxa_leiloeiro) + (preco * taxa_itbi)
             custo_total = preco + custos_adicionais
             lucro_liquido = (
-                avaliac - custo_total
-                if pd.notnull(avaliac) and pd.notnull(preco)
+                valor_referencia - custo_total
+                if pd.notnull(valor_referencia) and pd.notnull(preco)
                 else 0
             )
 
@@ -841,6 +909,11 @@ else:
                 "Tipo de Bem": imovel["Tipo de Bem"],
                 "Preço do Leilão (R$)": preco,
                 "Valor de Avaliação (R$)": avaliac,
+                "Preço Médio Mercado (API)": (
+                    round(preco_mercado_api, 2)
+                    if preco_mercado_api
+                    else avaliac
+                ),
                 "Desconto (%)": round(imovel["desconto_%"], 2),
                 "Custo Total Estimado (R$)": round(custo_total, 2),
                 "Lucro Líquido Real (R$)": round(lucro_liquido, 2),
@@ -851,7 +924,10 @@ else:
         st.session_state["df_final"] = pd.DataFrame(resultados)
         st.session_state["investidores_sem_imoveis"] = investidores_sem_imoveis
         st.session_state["imoveis_selecionados"] = []
-        st.toast("✅ Processamento Enterprise concluído!", icon="🎉")
+        st.toast(
+            "✅ Processamento Enterprise & Inteligência de Mercado concluído!",
+            icon="🎉",
+        )
 
       except Exception as e:
         st.error(f"Erro ao processar as planilhas: {e}")
@@ -880,9 +956,7 @@ else:
       with f_col2:
         tipos_disponiveis = sorted(df_base["Tipo de Bem"].unique().tolist())
         tipos_selecionados = st.multiselect(
-            "Tipo de Bem",
-            options=tipos_disponiveis,
-            default=tipos_disponiveis,
+            "Tipo de Bem", options=tipos_disponiveis, default=tipos_disponiveis
         )
       with f_col3:
         busca_texto = st.text_input(
@@ -1021,6 +1095,9 @@ else:
                 "Valor de Avaliação (R$)": st.column_config.NumberColumn(
                     "Valor Avaliação", format="R$ %,.2f"
                 ),
+                "Preço Médio Mercado (API)": st.column_config.NumberColumn(
+                    "Mercado (API)", format="R$ %,.2f"
+                ),
                 "Custo Total Estimado (R$)": st.column_config.NumberColumn(
                     "Custo Total", format="R$ %,.2f"
                 ),
@@ -1109,6 +1186,7 @@ else:
                             <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']} | Pretendente: <b>{row['Nome do Investidor']}</b></p>
                             <div style="margin-bottom: 8px;">
                                 <span class="price-main">R$ {row['Preço do Leilão (R$)']:,.2f}</span> <span class="price-old">(Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f})</span><br>
+                                <span style="font-size: 0.88rem; color: #0284C7;">🌐 Preço Médio Mercado (API): R$ {row.get('Preço Médio Mercado (API)', 0):,.2f}</span><br>
                                 <span class="price-profit">💰 Lucro Líquido Real: R$ {row['Lucro Líquido Real (R$)']:,.2f}</span>
                             </div>
                             <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px;"><b>Endereço:</b> {row['Endereço']}</p>
@@ -1161,9 +1239,7 @@ else:
             else:
               st.info("🔒 PDF restrito.")
 
-        df_inv = df_filtered[
-            df_filtered["Nome do Investidor"] == investidor_sel
-        ]
+        df_inv = df_filtered[df_filtered["Nome do Investidor"] == investidor_sel]
 
         st.markdown(f"### 🎯 Vitrine Exclusiva: **{investidor_sel}**")
         st.caption(
@@ -1175,7 +1251,7 @@ else:
 
         @st.fragment
         def renderizar_vitrine_com_paginacao(df_investidor):
-          itens_por_pagina = 20  # Mantido com 20 itens por página para alta performance
+          itens_por_pagina = 20
           total_imoveis = len(df_investidor)
           total_pages = (
               (total_imoveis + itens_por_pagina - 1) // itens_por_pagina
@@ -1230,6 +1306,7 @@ else:
                 f"📍 Local: {row['Cidade Imóvel']} - {row['Estado Imóvel']}\n"
                 f"💰 Lance Mínimo: R$ {row['Preço do Leilão (R$)']:,.2f}\n"
                 f"💵 Valor de Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f}\n"
+                f"🌐 Preço Médio Mercado (API): R$ {row.get('Preço Médio Mercado (API)', 0):,.2f}\n"
                 f"📈 Lucro Líquido Estimado: R$ {row['Lucro Líquido Real (R$)']:,.2f}\n"
                 f"🔗 Acesse o anúncio oficial: {link_url}"
             )
@@ -1239,19 +1316,20 @@ else:
               st.markdown(badge_html, unsafe_allow_html=True)
               st.markdown(
                   f"""
-                    <div class="property-card">
-                        <h4 style="margin-top: 4px; margin-bottom: 4px; color: #1E293B;">{row['Título do Imóvel']}</h4>
-                        <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']}</p>
-                        <div style="margin-bottom: 8px;">
-                            <span class="price-main">R$ {row['Preço do Leilão (R$)']:,.2f}</span> <span class="price-old">(Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f})</span><br>
-                            <span class="price-profit">💰 Lucro Líquido Real: R$ {row['Lucro Líquido Real (R$)']:,.2f}</span><br>
-                            <span class="price-costs">• Comissão do Leiloeiro: R$ {val_comissao_leiloeiro:,.2f}</span><br>
-                            <span class="price-costs">• ITBI e Cartório: R$ {val_itbi_cartorio:,.2f}</span><br>
-                            <span class="price-costs">🛠️ Custo Total Estimado: R$ {row['Custo Total Estimado (R$)']:,.2f}</span>
+                        <div class="property-card">
+                            <h4 style="margin-top: 4px; margin-bottom: 4px; color: #1E293B;">{row['Título do Imóvel']}</h4>
+                            <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 8px;">📍 {row['Cidade Imóvel']} - {row['Estado Imóvel']}</p>
+                            <div style="margin-bottom: 8px;">
+                                <span class="price-main">R$ {row['Preço do Leilão (R$)']:,.2f}</span> <span class="price-old">(Avaliação: R$ {row['Valor de Avaliação (R$)']:,.2f})</span><br>
+                                <span style="font-size: 0.88rem; color: #0284C7;">🌐 Preço Médio Mercado (API): R$ {row.get('Preço Médio Mercado (API)', 0):,.2f}</span><br>
+                                <span class="price-profit">💰 Lucro Líquido Real: R$ {row['Lucro Líquido Real (R$)']:,.2f}</span><br>
+                                <span class="price-costs">• Comissão do Leiloeiro: R$ {val_comissao_leiloeiro:,.2f}</span><br>
+                                <span class="price-costs">• ITBI e Cartório: R$ {val_itbi_cartorio:,.2f}</span><br>
+                                <span class="price-costs">🛠️ Custo Total Estimado: R$ {row['Custo Total Estimado (R$)']:,.2f}</span>
+                            </div>
+                            <p style="font-size: 0.85rem; color: #475569; margin-bottom: 0;"><b>Endereço:</b> {row['Endereço']}</p>
                         </div>
-                        <p style="font-size: 0.85rem; color: #475569; margin-bottom: 0;"><b>Endereço:</b> {row['Endereço']}</p>
-                    </div>
-                    """,
+                        """,
                   unsafe_allow_html=True,
               )
 
@@ -1295,20 +1373,20 @@ else:
               with col_b2:
                 st.markdown(
                     f"""
-                    <a href="{link_url}" target="_blank" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: #E0E7FF; color: #3730A3; border-radius: 8px; height: 44px; font-size: 0.95rem; font-weight: bold; width: 100%; box-shadow: 0 2px 6px rgba(0,0,0,0.05); transition: all 0.2s ease;">
-                        🔗 Ver Anúncio
-                    </a>
-                    """,
+                        <a href="{link_url}" target="_blank" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: #E0E7FF; color: #3730A3; border-radius: 8px; height: 44px; font-size: 0.95rem; font-weight: bold; width: 100%; box-shadow: 0 2px 6px rgba(0,0,0,0.05); transition: all 0.2s ease;">
+                            🔗 Ver Anúncio
+                        </a>
+                        """,
                     unsafe_allow_html=True,
                 )
 
               with col_b3:
                 st.markdown(
                     f"""
-                    <a href="{link_wats}" target="_blank" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: #25D366; color: white; border-radius: 8px; height: 44px; font-size: 0.95rem; font-weight: bold; width: 100%; box-shadow: 0 2px 6px rgba(0,0,0,0.05); transition: all 0.2s ease;">
-                        💬 WhatsApp
-                    </a>
-                    """,
+                        <a href="{link_wats}" target="_blank" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: #25D366; color: white; border-radius: 8px; height: 44px; font-size: 0.95rem; font-weight: bold; width: 100%; box-shadow: 0 2px 6px rgba(0,0,0,0.05); transition: all 0.2s ease;">
+                            💬 WhatsApp
+                        </a>
+                        """,
                     unsafe_allow_html=True,
                 )
 
